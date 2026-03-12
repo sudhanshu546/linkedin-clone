@@ -1,0 +1,104 @@
+logging:
+  level:
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+    com.org.linkedin: DEBUG
+
+server:
+  port: 8090
+
+apiPrefix: /us
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+  instance:
+    preferIpAddress: true
+    hostname: localhost
+
+spring:
+  application:
+    name: user-service
+  main:
+    allow-bean-definition-overriding: true
+  resources:
+    add-mappings: false
+  mvc:
+    throw-exception-if-no-handler-found: true
+  jpa:
+    hibernate:
+      dialect: org.hibernate.dialect.PostgreSQLDialect
+      ddl-auto: update
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    url: ${DB_URI:jdbc:postgresql://localhost:5432/user_service_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    hikari:
+      poolName: Hikari
+      maximumPoolSize: 5
+      minimumIdle: 2
+      idleTimeout: 300000
+      autoCommit: false
+      maxLifetime: 600000
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jws-algorithm: RS256
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/linkedin
+          jwk-set-uri: ${spring.security.oauth2.resourceserver.jwt.issuer-uri}/protocol/openid-connect/certs
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+kafka:
+  topics:
+    post-created: post-created
+    post-liked: post-liked
+    comment-created: comment-created
+
+
+keycloak:
+  realm: linkedin
+  url: ${KEYCLOAK_URL:http://localhost:8080}
+  baseurl: ${keycloak.url}/realms/${keycloak.realm}/protocol/openid-connect/token
+  user:
+    clientName: linkedin-client
+    clientSecret: ${KEYCLOAK_USER_CLIENT_SECRET:r2wtj8OkaTk0Si6RF6P0Gs0CmNhsdmRP}
+    clientId: 5bcbe09d-b6f2-4599-a7f4-5e4685095d6b
+
+openapi:
+  service:
+    title: user-service doc
+    version: 1.0.0
+    url: ${OPENAPI_URL:http://localhost:9191/us}
+
+springdoc:
+  api-docs:
+    path: /us/v3/api-docs
+  swagger-ui:
+    path: /us/swagger-ui
+
+sendgrid:
+  api:
+    key: ${SENDGRID_API_KEY:dummy-api-key}
+  emailConfig:
+    senderEmail: ${SENDER_EMAIL:manish.moryani@hashstudioz.com}
+  templateId:
+    forgotPassword: d-3a5ce38583da4ee38659219f282167b6
+    registration: d-e2cd214da4b54ffcbbc3fea6cca0bf06
+
+encryption:
+  secureSharingEncryptInitVector: ${ENCRYPTION_IV:vdeevaddasudiabh}
+  secureSharingEncryptKey: ${ENCRYPTION_KEY:asudisdnadevader}
+
+validation:
+  file:
+    size: 307200
+
+user:
+  createPasswordUrl: https://v2pine.dev.hashstudioz.com/user-login/createPassword?token=

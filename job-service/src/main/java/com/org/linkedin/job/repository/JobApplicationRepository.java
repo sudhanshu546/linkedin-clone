@@ -1,0 +1,14 @@
+package com.org.linkedin.job.repository;
+
+import com.org.linkedin.domain.job.JobApplication;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.UUID;
+
+@Repository
+public interface JobApplicationRepository extends JpaRepository<JobApplication, UUID> {
+    List<JobApplication> findByJobIdOrderByAppliedAtDesc(UUID jobId);
+    List<JobApplication> findByApplicantIdOrderByAppliedAtDesc(UUID applicantId);
+}

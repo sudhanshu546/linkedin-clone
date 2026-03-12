@@ -1,0 +1,186 @@
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.web: DEBUG
+    io.github.resilience4j: DEBUG
+
+server:
+  port: 9191
+
+spring:
+  application:
+    name: api-gateway
+
+  profiles:
+    active: dev
+
+  main:
+    allow-bean-definition-overriding: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jws-algorithm: RS256
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/linkedin
+          jwk-set-uri: ${spring.security.oauth2.resourceserver.jwt.issuer-uri}/protocol/openid-connect/certs
+
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+
+      routes:
+        - id: profile-service
+          uri: lb://profile-service
+          predicates:
+            - Path=/ps/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: profileServiceCB
+                fallbackUri: forward:/fallback/profile
+
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/us/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: userServiceCB
+                fallbackUri: forward:/fallback/user
+
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/ns/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: notificationServiceCB
+                fallbackUri: forward:/fallback/notification
+
+        - id: job-service
+          uri: lb://job-service
+          predicates:
+            - Path=/js/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: jobServiceCB
+                fallbackUri: forward:/fallback/job
+
+        - id: chat-service
+          uri: lb://chat-service
+          predicates:
+            - Path=/cs/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: chatServiceCB
+                fallbackUri: forward:/fallback/chat
+
+        - id: chat-service-ws
+          uri: lb://chat-service
+          predicates:
+            - Path=/ws-chat/**
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+  instance:
+    preferIpAddress: true
+    hostname: localhost
+
+management:
+  endpoint:
+    gateway:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health,gateway,info
+
+resilience4j:
+  circuitbreaker:
+    instances:
+
+      profileServiceCB:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 5s
+        timeoutDuration: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+
+      userServiceCB:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        timeoutDuration: 10s
+
+      notificationServiceCB:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 5s
+
+      jobServiceCB:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 5s
+
+      chatServiceCB:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 5s
+
+  timelimiter:
+    instances:
+
+      profileServiceCB:
+        timeoutDuration: 10s
+
+      userServiceCB:
+        timeoutDuration: 10s
+
+      notificationServiceCB:
+        timeoutDuration: 3s
+
+      jobServiceCB:
+        timeoutDuration: 3s
+
+      chatServiceCB:
+        timeoutDuration: 3s
+
+springdoc:
+  enable-native-support: true
+
+  api-docs:
+    enabled: true
+
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui
+    config-url: /v3/api-docs/swagger-config
+
+    urls:
+      - name: API Gateway Service
+        url: /v3/api-docs
+
+      - name: User Service
+        url: /us/v3/api-docs
+
+      - name: Master Service
+        url: /ms/v3/api-docs
+
+      - name: Report Service
+        url: /rs/v3/api-docs
+
+      - name: Notification Service
+        url: /ns/v3/api-docs
+
+      - name: Device Connect Service
+        url: /dcs/v3/api-docs
