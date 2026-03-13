@@ -29,6 +29,8 @@ spring:
         jwt:
           jws-algorithm: RS256
           issuer-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/linkedin
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
 openapi:
   service:

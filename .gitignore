@@ -1,0 +1,15 @@
+target/
+*.jar
+*.war
+*.ear
+.idea/
+*.iml
+.DS_Store
+uploads/
+build_all.ps1
+start.sh
+**/target/
+**/*.jar
+**/*.class
+**/maven-status/
+**/maven-archiver/

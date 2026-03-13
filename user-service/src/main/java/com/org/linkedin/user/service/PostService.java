@@ -95,7 +95,8 @@ public class PostService {
 
     post = postRepository.save(post);
 
-    String fullName = user.getFirstName() + (user.getLastName() != null ? " " + user.getLastName() : "");
+    String fullName =
+        user.getFirstName() + (user.getLastName() != null ? " " + user.getLastName() : "");
     String designation = "LinkedIn Member";
 
     // Publish Kafka Event
@@ -114,11 +115,12 @@ public class PostService {
 
   public void likePost(Authentication authentication, UUID postId) {
     TUserDTO user = getUserDetails(authentication);
-    String fullName = user.getFirstName() + (user.getLastName() != null ? " " + user.getLastName() : "");
+    String fullName =
+        user.getFirstName() + (user.getLastName() != null ? " " + user.getLastName() : "");
     String designation = "LinkedIn Member";
 
-    Post post = postRepository.findById(postId)
-        .orElseThrow(() -> new RuntimeException("Post not found"));
+    Post post =
+        postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
 
     if (likeRepository.findByPostIdAndUserId(postId, user.getId()).isPresent()) {
       return;
@@ -142,11 +144,12 @@ public class PostService {
 
   public Comment addComment(Authentication authentication, UUID postId, String content) {
     TUserDTO user = getUserDetails(authentication);
-    String fullName = user.getFirstName() + (user.getLastName() != null ? " " + user.getLastName() : "");
+    String fullName =
+        user.getFirstName() + (user.getLastName() != null ? " " + user.getLastName() : "");
     String designation = "LinkedIn Member";
 
-    Post post = postRepository.findById(postId)
-        .orElseThrow(() -> new RuntimeException("Post not found"));
+    Post post =
+        postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
 
     Comment comment =
         Comment.builder()
@@ -193,13 +196,15 @@ public class PostService {
 
   public void deleteComment(Authentication authentication, UUID commentId) {
     TUserDTO user = getUserDetails(authentication);
-    Comment comment = commentRepository.findById(commentId)
-        .orElseThrow(() -> new RuntimeException("Comment not found"));
-    
+    Comment comment =
+        commentRepository
+            .findById(commentId)
+            .orElseThrow(() -> new RuntimeException("Comment not found"));
+
     if (!comment.getUserId().equals(user.getId())) {
       throw new RuntimeException("Unauthorized to delete this comment");
     }
-    
+
     commentRepository.delete(comment);
   }
 }
