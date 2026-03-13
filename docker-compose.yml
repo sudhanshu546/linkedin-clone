@@ -2,10 +2,12 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:25.0.3
     container_name: keycloak
+    restart: always
     command: start-dev --import-realm
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     ports:
       - "8080:8080"
     volumes:
@@ -16,12 +18,14 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: postgres
+    restart: always
     ports:
       - "5432:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
+      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     volumes:
       - ./postgres-init:/docker-entrypoint-initdb.d
       - postgres_data:/var/lib/postgresql/data
@@ -31,15 +35,18 @@ services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
     container_name: zookeeper
+    restart: always
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     networks:
       - linkedin-network
 
   kafka:
     image: confluentinc/cp-kafka:7.4.0
     container_name: kafka
+    restart: always
     depends_on:
       - zookeeper
     ports:
@@ -47,11 +54,12 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092,PLAINTEXT_CLOUD://${RAILWAY_PRIVATE_DOMAIN:-localhost}:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,PLAINTEXT_CLOUD:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENERS: PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     networks:
       - linkedin-network
 
@@ -62,6 +70,8 @@ services:
     container_name: discovery-service
     ports:
       - "8761:8761"
+    environment:
+      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     networks:
       - linkedin-network
     healthcheck:
@@ -75,11 +85,13 @@ services:
       context: .
       dockerfile: api-gateway/Dockerfile
     container_name: api-gateway
+    restart: always
     ports:
       - "9191:9191"
     environment:
-      EUREKA_URL: http://discovery-service:8761/eureka
+      EUREKA_URL: ${EUREKA_URL:-http://discovery-service:8761/eureka}
       KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
+      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -91,15 +103,17 @@ services:
       context: .
       dockerfile: user-service/Dockerfile
     container_name: user-service
+    restart: always
     ports:
       - "8090:8090"
     environment:
-      EUREKA_URL: http://discovery-service:8761/eureka
+      EUREKA_URL: ${EUREKA_URL:-http://discovery-service:8761/eureka}
       DB_URI: ${DB_URI:-jdbc:postgresql://postgres:5432/user_service_db}
       DB_USERNAME: ${DB_USERNAME:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
+      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     volumes:
       - ./uploads:/app/uploads
     depends_on:
@@ -117,15 +131,17 @@ services:
       context: .
       dockerfile: profile-service/Dockerfile
     container_name: profile-service
+    restart: always
     ports:
       - "8700:8700"
     environment:
-      EUREKA_URL: http://discovery-service:8761/eureka
+      EUREKA_URL: ${EUREKA_URL:-http://discovery-service:8761/eureka}
       DB_URI: ${DB_URI:-jdbc:postgresql://postgres:5432/profile_service_db}
       DB_USERNAME: ${DB_USERNAME:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
+      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -141,14 +157,16 @@ services:
       context: .
       dockerfile: notification-service/Dockerfile
     container_name: notification-service
+    restart: always
     ports:
       - "9095:9095"
     environment:
-      EUREKA_URL: http://discovery-service:8761/eureka
+      EUREKA_URL: ${EUREKA_URL:-http://discovery-service:8761/eureka}
       DB_URI: ${DB_URI:-jdbc:postgresql://postgres:5432/notification_service_db}
       DB_USERNAME: ${DB_USERNAME:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -164,15 +182,17 @@ services:
       context: .
       dockerfile: job-service/Dockerfile
     container_name: job-service
+    restart: always
     ports:
       - "8081:8081"
     environment:
-      EUREKA_URL: http://discovery-service:8761/eureka
+      EUREKA_URL: ${EUREKA_URL:-http://discovery-service:8761/eureka}
       DB_URI: ${DB_URI:-jdbc:postgresql://postgres:5432/job_service_db}
       DB_USERNAME: ${DB_USERNAME:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
+      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -188,15 +208,17 @@ services:
       context: .
       dockerfile: chat-service/Dockerfile
     container_name: chat-service
+    restart: always
     ports:
       - "8086:8086"
     environment:
-      EUREKA_URL: http://discovery-service:8761/eureka
+      EUREKA_URL: ${EUREKA_URL:-http://discovery-service:8761/eureka}
       DB_URI: ${DB_URI:-jdbc:postgresql://postgres:5432/chat_service_db}
       DB_USERNAME: ${DB_USERNAME:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
+      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     depends_on:
       discovery-service:
         condition: service_healthy

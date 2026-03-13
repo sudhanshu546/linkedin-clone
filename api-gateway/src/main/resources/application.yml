@@ -106,7 +106,7 @@ eureka:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
   instance:
     preferIpAddress: true
-    hostname: localhost
+    hostname: ${REGISTRATION_IP:localhost}
 
 management:
   endpoint:
