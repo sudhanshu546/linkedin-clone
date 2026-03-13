@@ -1,14 +1,12 @@
-FROM maven:3.8.4-openjdk-17-slim AS build
-WORKDIR /app
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /build
 # Copy the entire project so Maven reactor works correctly
 COPY . .
-# Build the project, only producing the JAR for the specific service
+# Build only the specific module and its dependencies
 RUN mvn clean package -DskipTests -pl job-service -am
 
 FROM eclipse-temurin:17-jre-alpine
-RUN addgroup -S spring && adduser -S spring -G spring
-USER spring:spring
 WORKDIR /app
-# Extract the jar from the correct subfolder
-COPY --from=build /app/job-service/target/job-service-*.jar app.jar
-ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+# Extract the jar from the correct module folder
+COPY --from=build /build/job-service/target/job-service-*.jar app.jar
+ENTRYPOINT ["java", "-jar", "app.jar"]
