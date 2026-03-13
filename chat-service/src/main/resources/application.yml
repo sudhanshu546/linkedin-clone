@@ -1,5 +1,5 @@
 server:
-  port: 8086
+  port: ${PORT:8086}
 
 apiPrefix: /cs
 
@@ -20,8 +20,8 @@ spring:
       ddl-auto: update
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
-    url: ${JDBC_DATABASE_URL:jdbc:${DB_URI:postgresql://localhost:5432/chat_service_db}}
-    username: ${DB_USERNAME:postgres}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/chat_service_db}
+    username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
   security:
     oauth2:

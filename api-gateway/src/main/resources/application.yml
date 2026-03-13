@@ -5,7 +5,7 @@ logging:
     io.github.resilience4j: DEBUG
 
 server:
-  port: 9191
+  port: ${PORT:9191}
 
 spring:
   application:

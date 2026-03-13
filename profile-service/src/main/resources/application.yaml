@@ -1,5 +1,5 @@
 server:
-  port: 8700
+  port: ${PORT:8700}
 
 apiPrefix: /ps
 
@@ -32,8 +32,8 @@ spring:
       ddl-auto: update
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
-    url: ${JDBC_DATABASE_URL:jdbc:${DB_URI:postgresql://localhost:5432/profile_service_db}}
-    username: ${DB_USERNAME:postgres}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/profile_service_db}
+    username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
     hikari:
       poolName: Hikari
