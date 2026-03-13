@@ -33,14 +33,38 @@ public class NotificationConsumer {
     @KafkaListener(topics = "${kafka.topics.post-liked}", groupId = "notification-service-group")
     public void consumePostLiked(@Payload PostLikedEvent event) {
         log.info("Received PostLikedEvent: {}", event);
-        // recipientId would ideally come from the post metadata or a combined event
-        // For now, we log it. In a full implementation, you'd fetch post.authorId
+        if (event.getPostAuthorId() != null) {
+            saveNotification(
+                java.util.UUID.fromString(event.getPostAuthorId()), 
+                java.util.UUID.fromString(event.getUserId()), 
+                "POST_LIKED", 
+                event.getUserName() + " liked your post."
+            );
+        }
     }
 
     @KafkaListener(topics = "${kafka.topics.comment-created}", groupId = "notification-service-group")
     public void consumeCommentCreated(@Payload CommentCreatedEvent event) {
         log.info("Received CommentCreatedEvent: {}", event);
-        // Similar to PostLiked, need post owner ID
+        if (event.getPostAuthorId() != null) {
+            saveNotification(
+                java.util.UUID.fromString(event.getPostAuthorId()), 
+                java.util.UUID.fromString(event.getUserId()), 
+                "COMMENT_CREATED", 
+                event.getUserName() + " commented on your post: " + event.getContent()
+            );
+        }
+    }
+
+    @KafkaListener(topics = "${kafka.topics.profile-viewed}", groupId = "notification-service-group")
+    public void consumeProfileViewed(@Payload ProfileViewedEvent event) {
+        log.info("Received ProfileViewedEvent: {}", event);
+        saveNotification(
+            event.getProfileOwnerId(), 
+            event.getViewerId(), 
+            "PROFILE_VIEWED", 
+            "Someone viewed your profile."
+        );
     }
 
     private void saveNotification(java.util.UUID recipientId, java.util.UUID senderId, String type, String message) {

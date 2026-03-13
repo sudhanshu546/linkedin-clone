@@ -45,3 +45,4 @@ kafka:
     connection-accepted: connection-accepted
     post-liked: post-liked
     comment-created: comment-created
+    profile-viewed: profile-viewed

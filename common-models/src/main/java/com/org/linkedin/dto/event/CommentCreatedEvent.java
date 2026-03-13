@@ -7,6 +7,7 @@ import lombok.Data;
 public class CommentCreatedEvent implements Serializable {
   private String commentId;
   private String postId;
+  private String postAuthorId;
   private String userId;
   private String userName;
   private String userDesignation;

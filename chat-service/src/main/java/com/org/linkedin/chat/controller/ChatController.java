@@ -4,6 +4,7 @@ import com.org.linkedin.chat.repo.ChatMessageRepository;
 import com.org.linkedin.domain.chat.ChatMessage;
 import com.org.linkedin.utility.client.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -26,6 +27,7 @@ public class ChatController {
     @MessageMapping("/chat")
     public void processMessage(@Payload ChatMessage chatMessage) {
         chatMessage.setTimestamp(LocalDateTime.now());
+        chatMessage.setRead(false);
         ChatMessage saved = chatMessageRepository.save(chatMessage);
         
         messagingTemplate.convertAndSendToUser(
@@ -44,5 +46,13 @@ public class ChatController {
         return chatMessageRepository.findBySenderIdAndRecipientIdOrSenderIdAndRecipientIdOrderByTimestampAsc(
                 senderId, recipientId, recipientId, senderId
         );
+    }
+
+    @PatchMapping("/read/{senderId}")
+    public ResponseEntity<Void> markAsRead(Authentication authentication, @PathVariable UUID senderId) {
+        UUID keycloakId = UUID.fromString(authentication.getName());
+        UUID recipientId = userService.getUserByKeyCloakId(keycloakId).getBody().getResult().getId();
+        chatMessageRepository.markMessagesAsRead(recipientId, senderId);
+        return ResponseEntity.ok().build();
     }
 }

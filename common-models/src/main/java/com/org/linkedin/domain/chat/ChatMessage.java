@@ -26,6 +26,10 @@ public class ChatMessage {
   @Column(nullable = false, columnDefinition = "TEXT")
   private String content;
 
+  @Builder.Default
+  @Column(name = "is_read", nullable = false)
+  private boolean isRead = false;
+
   @Column(name = "timestamp")
   private LocalDateTime timestamp = LocalDateTime.now();
 }

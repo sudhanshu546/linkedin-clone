@@ -6,6 +6,7 @@ import lombok.Data;
 @Data
 public class PostLikedEvent implements Serializable {
   private String postId;
+  private String postAuthorId;
   private String userId;
   private String userName;
   private String userDesignation;

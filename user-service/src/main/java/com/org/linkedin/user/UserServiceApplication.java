@@ -102,7 +102,8 @@ public class UserServiceApplication {
             auth ->
                 auth.requestMatchers(
                         new AntPathRequestMatcher("/us/user/add"),
-                        new AntPathRequestMatcher("/us/login/**"))
+                        new AntPathRequestMatcher("/us/login/**"),
+                        new AntPathRequestMatcher("/us/uploads/**"))
                     .permitAll()
                     .anyRequest()
                     .authenticated())

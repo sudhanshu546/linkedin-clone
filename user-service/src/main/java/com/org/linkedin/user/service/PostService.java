@@ -117,6 +117,9 @@ public class PostService {
     String fullName = user.getFirstName() + (user.getLastName() != null ? " " + user.getLastName() : "");
     String designation = "LinkedIn Member";
 
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new RuntimeException("Post not found"));
+
     if (likeRepository.findByPostIdAndUserId(postId, user.getId()).isPresent()) {
       return;
     }
@@ -126,6 +129,7 @@ public class PostService {
 
     PostLikedEvent event = new PostLikedEvent();
     event.setPostId(postId.toString());
+    event.setPostAuthorId(post.getUserId().toString());
     event.setUserId(user.getId().toString());
     event.setUserName(fullName);
     event.setUserDesignation(designation);
@@ -141,6 +145,9 @@ public class PostService {
     String fullName = user.getFirstName() + (user.getLastName() != null ? " " + user.getLastName() : "");
     String designation = "LinkedIn Member";
 
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new RuntimeException("Post not found"));
+
     Comment comment =
         Comment.builder()
             .postId(postId)
@@ -155,6 +162,7 @@ public class PostService {
     CommentCreatedEvent event = new CommentCreatedEvent();
     event.setCommentId(comment.getId().toString());
     event.setPostId(postId.toString());
+    event.setPostAuthorId(post.getUserId().toString());
     event.setUserId(user.getId().toString());
     event.setUserName(fullName);
     event.setUserDesignation(designation);

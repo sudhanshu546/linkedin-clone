@@ -38,4 +38,6 @@ public class TUserDTO extends BaseDTO implements Serializable {
   @NotNull(message = ErrorMessageKeys.EMAIL_CANNOT_BE_NULL)
   @Size(max = 255)
   String email;
+
+  String profileImageUrl;
 }

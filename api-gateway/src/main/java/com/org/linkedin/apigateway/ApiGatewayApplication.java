@@ -52,6 +52,8 @@ public class ApiGatewayApplication {
                     .permitAll()
                     .pathMatchers("/us/user/add")
                     .permitAll()
+                    .pathMatchers("/us/uploads/**")
+                    .permitAll()
                     .anyExchange()
                     .authenticated())
         .oauth2ResourceServer((oauth) -> oauth.jwt(Customizer.withDefaults()))

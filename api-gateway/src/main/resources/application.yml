@@ -27,6 +27,13 @@ spring:
 
   cloud:
     gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "http://localhost:3000"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
       discovery:
         locator:
           enabled: true
@@ -88,6 +95,11 @@ spring:
           predicates:
             - Path=/ws-chat/**
 
+        - id: notification-service-ws
+          uri: lb://notification-service
+          predicates:
+            - Path=/ws/**
+
 eureka:
   client:
     serviceUrl:
@@ -108,30 +120,25 @@ management:
 resilience4j:
   circuitbreaker:
     instances:
-
       profileServiceCB:
         slidingWindowSize: 10
         failureRateThreshold: 50
         waitDurationInOpenState: 5s
         timeoutDuration: 10s
         permittedNumberOfCallsInHalfOpenState: 3
-
       userServiceCB:
         slidingWindowSize: 10
         failureRateThreshold: 50
         waitDurationInOpenState: 10s
         timeoutDuration: 10s
-
       notificationServiceCB:
         slidingWindowSize: 10
         failureRateThreshold: 50
         waitDurationInOpenState: 5s
-
       jobServiceCB:
         slidingWindowSize: 10
         failureRateThreshold: 50
         waitDurationInOpenState: 5s
-
       chatServiceCB:
         slidingWindowSize: 10
         failureRateThreshold: 50
@@ -139,48 +146,35 @@ resilience4j:
 
   timelimiter:
     instances:
-
       profileServiceCB:
         timeoutDuration: 10s
-
       userServiceCB:
         timeoutDuration: 10s
-
       notificationServiceCB:
         timeoutDuration: 3s
-
       jobServiceCB:
         timeoutDuration: 3s
-
       chatServiceCB:
         timeoutDuration: 3s
 
 springdoc:
   enable-native-support: true
-
   api-docs:
     enabled: true
-
   swagger-ui:
     enabled: true
     path: /swagger-ui
     config-url: /v3/api-docs/swagger-config
-
     urls:
       - name: API Gateway Service
         url: /v3/api-docs
-
       - name: User Service
         url: /us/v3/api-docs
-
       - name: Master Service
         url: /ms/v3/api-docs
-
       - name: Report Service
         url: /rs/v3/api-docs
-
       - name: Notification Service
         url: /ns/v3/api-docs
-
       - name: Device Connect Service
         url: /dcs/v3/api-docs

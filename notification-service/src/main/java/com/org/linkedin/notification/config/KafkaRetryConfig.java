@@ -16,7 +16,7 @@ public class KafkaRetryConfig {
                 .newInstance()
                 .maxAttempts(3)
                 .fixedBackOff(2000) // 2 seconds between retries
-                .includeTopics(Arrays.asList("connection-requested", "post-liked"))
+                .includeTopics(Arrays.asList("connection-requested", "connection-accepted", "post-liked", "comment-created", "profile-viewed"))
                 .create(template);
     }
 }

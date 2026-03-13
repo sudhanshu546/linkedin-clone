@@ -50,5 +50,8 @@ public class TUser extends AbstractAuditingEntity<UUID> implements Serializable 
   @Column(name = "last_name", length = 255)
   String lastName;
 
+  @Column(name = "profile_image_url")
+  String profileImageUrl;
+
   boolean enabled;
 }
