@@ -1,25 +1,18 @@
 services:
   keycloak:
-    build:
-      context: .
-      dockerfile: keycloak/Dockerfile
+    image: quay.io/keycloak/keycloak:25.0.3
     restart: always
-    command: start-dev --import-realm
+    command: start-dev
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     ports:
       - "8080:8080"
-    volumes:
-      - ./keycloak/linkedin.json:/opt/keycloak/data/import/realm.json
     networks:
       - linkedin-network
 
   postgres:
-    build:
-      context: .
-      dockerfile: postgres/Dockerfile
+    image: postgres:15-alpine
     restart: always
     ports:
       - "5432:5432"
@@ -27,7 +20,6 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
-      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     volumes:
       - ./postgres-init:/docker-entrypoint-initdb.d
       - postgres_data:/var/lib/postgresql/data
@@ -35,21 +27,16 @@ services:
       - linkedin-network
 
   zookeeper:
-    build:
-      context: .
-      dockerfile: zookeeper/Dockerfile
+    image: confluentinc/cp-zookeeper:7.4.0
     restart: always
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     networks:
       - linkedin-network
 
   kafka:
-    build:
-      context: .
-      dockerfile: kafka/Dockerfile
+    image: confluentinc/cp-kafka:7.4.0
     restart: always
     depends_on:
       - zookeeper
@@ -58,12 +45,10 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092,PLAINTEXT_CLOUD://${RAILWAY_PRIVATE_DOMAIN:-localhost}:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,PLAINTEXT_CLOUD:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENERS: PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     networks:
       - linkedin-network
 
@@ -73,8 +58,6 @@ services:
       dockerfile: discovery-service/Dockerfile
     ports:
       - "8761:8761"
-    environment:
-      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     networks:
       - linkedin-network
     healthcheck:
@@ -93,7 +76,6 @@ services:
     environment:
       EUREKA_URL: ${EUREKA_URL:-http://discovery-service:8761/eureka}
       KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
-      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -114,7 +96,6 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
-      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     volumes:
       - ./uploads:/app/uploads
     depends_on:
@@ -141,7 +122,6 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
-      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -165,7 +145,6 @@ services:
       DB_USERNAME: ${DB_USERNAME:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -190,7 +169,6 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
-      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -215,7 +193,6 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
-      REGISTRATION_IP: ${RAILWAY_PRIVATE_DOMAIN:-localhost}
     depends_on:
       discovery-service:
         condition: service_healthy
