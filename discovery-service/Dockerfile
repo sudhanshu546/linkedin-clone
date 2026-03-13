@@ -1,13 +1,16 @@
-# Stage 1: Build
 FROM maven:3.8.4-openjdk-17-slim AS build
 WORKDIR /app
-COPY . .
-RUN mvn clean package -DskipTests -pl discovery-service -am
+# Copy only this service's folder and the common folders
+COPY common-models /app/common-models
+COPY common-utility /app/common-utility
+COPY discovery-service /app/discovery-service
+COPY pom.xml /app/pom.xml 
 
-# Stage 2: Run
+# Build the common modules first, then the service
+RUN mvn install -DskipTests -pl common-models,common-utility -am
+RUN mvn package -DskipTests -pl discovery-service
+
 FROM eclipse-temurin:17-jre-alpine
-RUN addgroup -S spring && adduser -S spring -G spring
-USER spring:spring
 WORKDIR /app
 COPY --from=build /app/discovery-service/target/discovery-service-*.jar app.jar
-ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]

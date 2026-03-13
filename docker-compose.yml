@@ -1,7 +1,8 @@
 services:
   keycloak:
-    image: quay.io/keycloak/keycloak:25.0.3
-    container_name: keycloak
+    build:
+      context: .
+      dockerfile: keycloak/Dockerfile
     restart: always
     command: start-dev --import-realm
     environment:
@@ -16,8 +17,9 @@ services:
       - linkedin-network
 
   postgres:
-    image: postgres:15-alpine
-    container_name: postgres
+    build:
+      context: .
+      dockerfile: postgres/Dockerfile
     restart: always
     ports:
       - "5432:5432"
@@ -33,8 +35,9 @@ services:
       - linkedin-network
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.4.0
-    container_name: zookeeper
+    build:
+      context: .
+      dockerfile: zookeeper/Dockerfile
     restart: always
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
@@ -44,8 +47,9 @@ services:
       - linkedin-network
 
   kafka:
-    image: confluentinc/cp-kafka:7.4.0
-    container_name: kafka
+    build:
+      context: .
+      dockerfile: kafka/Dockerfile
     restart: always
     depends_on:
       - zookeeper
@@ -67,7 +71,6 @@ services:
     build:
       context: .
       dockerfile: discovery-service/Dockerfile
-    container_name: discovery-service
     ports:
       - "8761:8761"
     environment:
@@ -84,7 +87,6 @@ services:
     build:
       context: .
       dockerfile: api-gateway/Dockerfile
-    container_name: api-gateway
     restart: always
     ports:
       - "9191:9191"
@@ -102,7 +104,6 @@ services:
     build:
       context: .
       dockerfile: user-service/Dockerfile
-    container_name: user-service
     restart: always
     ports:
       - "8090:8090"
@@ -130,7 +131,6 @@ services:
     build:
       context: .
       dockerfile: profile-service/Dockerfile
-    container_name: profile-service
     restart: always
     ports:
       - "8700:8700"
@@ -156,7 +156,6 @@ services:
     build:
       context: .
       dockerfile: notification-service/Dockerfile
-    container_name: notification-service
     restart: always
     ports:
       - "9095:9095"
@@ -181,7 +180,6 @@ services:
     build:
       context: .
       dockerfile: job-service/Dockerfile
-    container_name: job-service
     restart: always
     ports:
       - "8081:8081"
@@ -207,7 +205,6 @@ services:
     build:
       context: .
       dockerfile: chat-service/Dockerfile
-    container_name: chat-service
     restart: always
     ports:
       - "8086:8086"
