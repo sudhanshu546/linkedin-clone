@@ -8,7 +8,7 @@ USER spring:spring
 WORKDIR /app
 
 # Copy the jar from the target directory
-COPY target/*.jar app.jar
+COPY target/job-service-*.jar app.jar
 
 # Optimize JVM settings for container environments
 ENTRYPOINT ["java", \
