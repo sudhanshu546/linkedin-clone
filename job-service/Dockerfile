@@ -1,17 +1,13 @@
-# Use a lightweight JRE for the final image
-FROM eclipse-temurin:17-jre-alpine
+# Stage 1: Build
+FROM maven:3.8.4-openjdk-17-slim AS build
+WORKDIR /app
+COPY . .
+RUN mvn clean package -DskipTests -pl job-service -am
 
-# Add a non-root user for security
+# Stage 2: Run
+FROM eclipse-temurin:17-jre-alpine
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring
-
 WORKDIR /app
-
-# Copy the jar from the target directory
-COPY target/job-service-*.jar app.jar
-
-# Optimize JVM settings for container environments
-ENTRYPOINT ["java", \
-            "-XX:+UseContainerSupport", \
-            "-XX:MaxRAMPercentage=75.0", \
-            "-jar", "app.jar"]
+COPY --from=build /app/job-service/target/job-service-*.jar app.jar
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]

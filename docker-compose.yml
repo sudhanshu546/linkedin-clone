@@ -55,7 +55,9 @@ services:
       - linkedin-network
 
   discovery-service:
-    build: ./discovery-service
+    build:
+      context: .
+      dockerfile: discovery-service/Dockerfile
     container_name: discovery-service
     ports:
       - "8761:8761"
@@ -68,7 +70,9 @@ services:
       start_period: 30s
 
   api-gateway:
-    build: ./api-gateway
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
     container_name: api-gateway
     ports:
       - "9191:9191"
@@ -82,7 +86,9 @@ services:
       - linkedin-network
 
   user-service:
-    build: ./user-service
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
     container_name: user-service
     ports:
       - "8090:8090"
@@ -106,7 +112,9 @@ services:
       - linkedin-network
 
   profile-service:
-    build: ./profile-service
+    build:
+      context: .
+      dockerfile: profile-service/Dockerfile
     container_name: profile-service
     ports:
       - "8700:8700"
@@ -128,7 +136,9 @@ services:
       - linkedin-network
 
   notification-service:
-    build: ./notification-service
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
     container_name: notification-service
     ports:
       - "9095:9095"
@@ -149,7 +159,9 @@ services:
       - linkedin-network
 
   job-service:
-    build: ./job-service
+    build:
+      context: .
+      dockerfile: job-service/Dockerfile
     container_name: job-service
     ports:
       - "8081:8081"
@@ -171,7 +183,9 @@ services:
       - linkedin-network
 
   chat-service:
-    build: ./chat-service
+    build:
+      context: .
+      dockerfile: chat-service/Dockerfile
     container_name: chat-service
     ports:
       - "8086:8086"
