@@ -22,7 +22,7 @@ spring:
       resourceserver:
         jwt:
           jws-algorithm: RS256
-          issuer-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/linkedin
+          issuer-uri: ${KEYCLOAK_URL:http://keycloak-placeholder}/realms/linkedin
           jwk-set-uri: ${spring.security.oauth2.resourceserver.jwt.issuer-uri}/protocol/openid-connect/certs
 
   cloud:
