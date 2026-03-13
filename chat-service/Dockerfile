@@ -1,12 +1,13 @@
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /build
-# Copy the entire project so Maven reactor works correctly
 COPY . .
-# Build only the specific module and its dependencies
 RUN mvn clean package -DskipTests -pl chat-service -am
 
 FROM eclipse-temurin:17-jre-alpine
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
 WORKDIR /app
-# Extract the jar from the correct module folder
-COPY --from=build /build/chat-service/target/chat-service-*.jar app.jar
-ENTRYPOINT ["java", "-jar", "app.jar"]
+
+COPY --from=build /build/chat-service/target/*.jar app.jar
+
+ENTRYPOINT ["java","-XX:+UseContainerSupport","-XX:MaxRAMPercentage=75.0","-jar","app.jar"]
