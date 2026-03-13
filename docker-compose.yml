@@ -1,4 +1,18 @@
 services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.3
+    container_name: keycloak
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/linkedin.json:/opt/keycloak/data/import/realm.json
+    networks:
+      - linkedin-network
+
   postgres:
     image: postgres:15-alpine
     container_name: postgres
@@ -60,7 +74,7 @@ services:
       - "9191:9191"
     environment:
       EUREKA_URL: http://discovery-service:8761/eureka
-      KEYCLOAK_URL: ${KEYCLOAK_URL:-http://host.docker.internal:8080}
+      KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -78,7 +92,7 @@ services:
       DB_USERNAME: ${DB_USERNAME:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      KEYCLOAK_URL: ${KEYCLOAK_URL:-http://host.docker.internal:8080}
+      KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
     volumes:
       - ./uploads:/app/uploads
     depends_on:
@@ -102,7 +116,7 @@ services:
       DB_USERNAME: ${DB_USERNAME:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      KEYCLOAK_URL: ${KEYCLOAK_URL:-http://host.docker.internal:8080}
+      KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -145,7 +159,7 @@ services:
       DB_USERNAME: ${DB_USERNAME:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      KEYCLOAK_URL: ${KEYCLOAK_URL:-http://host.docker.internal:8080}
+      KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -167,7 +181,7 @@ services:
       DB_USERNAME: ${DB_USERNAME:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      KEYCLOAK_URL: ${KEYCLOAK_URL:-http://host.docker.internal:8080}
+      KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
     depends_on:
       discovery-service:
         condition: service_healthy
