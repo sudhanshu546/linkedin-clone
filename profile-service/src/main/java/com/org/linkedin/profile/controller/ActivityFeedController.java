@@ -19,6 +19,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.org.linkedin.dto.BasePageResponse;
+import com.org.linkedin.dto.BaseResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
 @RestController
 @RequestMapping("${apiPrefix}/feed")
 @RequiredArgsConstructor
@@ -30,7 +36,7 @@ public class ActivityFeedController {
     private final ProfileRepo profileRepo;
 
     @GetMapping
-    public List<ActivityFeedItemDTO> getMyFeed(
+    public ResponseEntity<BasePageResponse<List<ActivityFeedItemDTO>>> getMyFeed(
             Authentication authentication,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "10") int size
@@ -41,9 +47,9 @@ public class ActivityFeedController {
             if (userRes != null && userRes.getBody() != null && userRes.getBody().getResult() != null) {
                 UUID internalUserId = userRes.getBody().getResult().getId();
                 org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
-                List<ActivityFeedItem> feedItems = activityFeedService.getFeedForUser(internalUserId, pageable);
+                Page<ActivityFeedItem> feedPage = activityFeedService.getFeedForUserPaginated(internalUserId, pageable);
                 
-                return feedItems.stream().map(item -> {
+                List<ActivityFeedItemDTO> dtoList = feedPage.getContent().stream().map(item -> {
                     ActivityFeedItemDTO dto = ActivityFeedItemDTO.builder()
                             .id(item.getId())
                             .userId(item.getUserId())
@@ -58,13 +64,8 @@ public class ActivityFeedController {
                             .timestamp(item.getTimestamp())
                             .build();
                     
-                    // Note: actorProfileId is still needed for linking to profile page
-                    // We can try to get it from a local cache or just use actorId if they match keycloak IDs
-                    // In this project, actorId is internal, actorProfileId was expected to be Keycloak ID
-                    // Let's at least try to get it once if not present, but for now we'll prioritize stability
                     dto.setActorProfileId(item.getActorId().toString()); 
 
-                    // Check if liked by current user - wrap in try-catch to prevent entire feed from failing
                     if (item.getPostId() != null) {
                         try {
                             var likedRes = userService.isLiked(item.getPostId());
@@ -78,10 +79,19 @@ public class ActivityFeedController {
                     
                     return dto;
                 }).collect(Collectors.toList());
+
+                return ResponseEntity.ok(BasePageResponse.<List<ActivityFeedItemDTO>>builder()
+                        .status(HttpStatus.OK.value())
+                        .message("Feed fetched successfully")
+                        .result(dtoList)
+                        .pageNumber(feedPage.getNumber())
+                        .pageSize(feedPage.getSize())
+                        .totalRecords(feedPage.getTotalElements())
+                        .build());
             }
         } catch (Exception e) {
             log.error("Error fetching feed: {}", e.getMessage());
         }
-        return java.util.Collections.emptyList();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
 }

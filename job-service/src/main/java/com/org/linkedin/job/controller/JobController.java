@@ -1,16 +1,18 @@
 package com.org.linkedin.job.controller;
 
-import com.org.linkedin.domain.job.Job;
-import com.org.linkedin.domain.job.JobApplication;
-import com.org.linkedin.job.repository.JobApplicationRepository;
-import com.org.linkedin.job.repository.JobRepository;
-import com.org.linkedin.utility.client.UserService;
+import com.org.linkedin.dto.BasePageResponse;
+import com.org.linkedin.dto.BaseResponse;
+import com.org.linkedin.dto.job.JobApplicationDTO;
+import com.org.linkedin.dto.job.JobDTO;
+import com.org.linkedin.job.service.JobService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -18,71 +20,111 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class JobController {
 
-    private final JobRepository jobRepository;
-    private final JobApplicationRepository jobApplicationRepository;
-    private final UserService userService;
+    private final JobService jobService;
 
     @PostMapping
-    public Job createJob(Authentication authentication, @RequestBody Job job) {
-        UUID keycloakId = UUID.fromString(authentication.getName());
-        UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getResult().getId();
-        job.setPostedBy(internalUserId);
-        return jobRepository.save(job);
+    public BaseResponse<JobDTO> createJob(Authentication authentication, @RequestBody JobDTO jobDTO) {
+        JobDTO result = jobService.createJob(authentication, jobDTO);
+        return BaseResponse.<JobDTO>builder()
+                .status(HttpStatus.OK.value())
+                .message("Job created successfully")
+                .result(result)
+                .build();
     }
 
     @GetMapping
-    public List<Job> getAllJobs() {
-        return jobRepository.findAll();
+    public BasePageResponse<List<JobDTO>> getAllJobs(Pageable pageable) {
+        return jobService.getAllJobs(pageable);
+    }
+
+    @GetMapping("/{jobId}")
+    public BaseResponse<JobDTO> getJobById(@PathVariable UUID jobId) {
+        JobDTO result = jobService.getJobById(jobId);
+        return BaseResponse.<JobDTO>builder()
+                .status(HttpStatus.OK.value())
+                .result(result)
+                .build();
+    }
+
+    @PutMapping("/{jobId}")
+    public BaseResponse<JobDTO> updateJob(@PathVariable UUID jobId, @RequestBody JobDTO jobDTO) {
+        JobDTO result = jobService.updateJob(jobId, jobDTO);
+        return BaseResponse.<JobDTO>builder()
+                .status(HttpStatus.OK.value())
+                .message("Job updated successfully")
+                .result(result)
+                .build();
+    }
+
+    @DeleteMapping("/{jobId}")
+    public BaseResponse<Void> deleteJob(@PathVariable UUID jobId) {
+        jobService.deleteJob(jobId);
+        return BaseResponse.<Void>builder()
+                .status(HttpStatus.OK.value())
+                .message("Job deleted successfully")
+                .build();
     }
 
     @GetMapping("/search")
-    public List<Job> searchJobs(
+    public BasePageResponse<List<JobDTO>> searchJobs(
+            @RequestParam(required = false) String query,
             @RequestParam(required = false) String title,
             @RequestParam(required = false) String company,
             @RequestParam(required = false) String location,
-            @RequestParam(required = false) String jobType
+            @RequestParam(required = false) String jobType,
+            Pageable pageable
     ) {
-        return jobRepository.searchJobs(title, company, location, jobType);
+        return jobService.searchJobs(query, title, company, location, jobType, pageable);
     }
 
     @PostMapping("/{jobId}/apply")
-    public JobApplication applyToJob(Authentication authentication, @PathVariable UUID jobId) {
-        UUID keycloakId = UUID.fromString(authentication.getName());
-        UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getResult().getId();
-        
-        JobApplication application = JobApplication.builder()
-                .jobId(jobId)
-                .applicantId(internalUserId)
-                .status("PENDING")
+    public BaseResponse<JobApplicationDTO> applyToJob(Authentication authentication, @PathVariable UUID jobId) {
+        JobApplicationDTO result = jobService.applyToJob(authentication, jobId);
+        return BaseResponse.<JobApplicationDTO>builder()
+                .status(HttpStatus.OK.value())
+                .message("Applied successfully")
+                .result(result)
                 .build();
-        
-        return jobApplicationRepository.save(application);
     }
 
     @GetMapping("/my-applications")
-    public List<JobApplication> getMyApplications(Authentication authentication) {
-        UUID keycloakId = UUID.fromString(authentication.getName());
-        UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getResult().getId();
-        return jobApplicationRepository.findByApplicantIdOrderByAppliedAtDesc(internalUserId);
+    public BaseResponse<List<JobApplicationDTO>> getMyApplications(Authentication authentication) {
+        List<JobApplicationDTO> result = jobService.getMyApplications(authentication);
+        return BaseResponse.<List<JobApplicationDTO>>builder()
+                .status(HttpStatus.OK.value())
+                .result(result)
+                .build();
     }
 
     @GetMapping("/my-postings")
-    public List<Job> getMyPostings(Authentication authentication) {
-        UUID keycloakId = UUID.fromString(authentication.getName());
-        UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getResult().getId();
-        return jobRepository.findByPostedByOrderByCreatedAtDesc(internalUserId);
+    public BaseResponse<List<JobDTO>> getMyPostings(Authentication authentication) {
+        List<JobDTO> result = jobService.getMyPostings(authentication);
+        return BaseResponse.<List<JobDTO>>builder()
+                .status(HttpStatus.OK.value())
+                .result(result)
+                .build();
     }
 
     @GetMapping("/{jobId}/applicants")
-    public List<JobApplication> getJobApplicants(@PathVariable UUID jobId) {
-        return jobApplicationRepository.findByJobIdOrderByAppliedAtDesc(jobId);
+    public BaseResponse<List<JobApplicationDTO>> getJobApplicants(@PathVariable UUID jobId) {
+        List<JobApplicationDTO> result = jobService.getJobApplicants(jobId);
+        return BaseResponse.<List<JobApplicationDTO>>builder()
+                .status(HttpStatus.OK.value())
+                .result(result)
+                .build();
     }
 
-    @PutMapping("/applications/{applicationId}/status")
-    public JobApplication updateApplicationStatus(@PathVariable UUID applicationId, @RequestParam String status) {
-        JobApplication application = jobApplicationRepository.findById(applicationId)
-                .orElseThrow(() -> new RuntimeException("Application not found"));
-        application.setStatus(status);
-        return jobApplicationRepository.save(application);
+    @PatchMapping("/{jobId}/applicants/{applicantId}")
+    public BaseResponse<JobApplicationDTO> updateApplicationStatus(
+            @PathVariable UUID jobId,
+            @PathVariable UUID applicantId,
+            @RequestBody Map<String, String> body) {
+        String status = body.get("status");
+        JobApplicationDTO result = jobService.updateApplicationStatus(jobId, applicantId, status);
+        return BaseResponse.<JobApplicationDTO>builder()
+                .status(HttpStatus.OK.value())
+                .message("Status updated successfully")
+                .result(result)
+                .build();
     }
 }

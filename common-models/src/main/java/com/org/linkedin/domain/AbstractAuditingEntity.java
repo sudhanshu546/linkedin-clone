@@ -30,16 +30,16 @@ public abstract class AbstractAuditingEntity<T> implements Serializable {
   private T createdBy;
 
   @CreatedDate
-  @Column(name = "created_date", updatable = false)
-  private Long createdDate = System.currentTimeMillis();
+  @Column(name = "created_at", updatable = false)
+  private Long createdAt = System.currentTimeMillis();
 
   @LastModifiedBy
   @Column(name = "last_modified_by")
   private T lastModifiedBy;
 
   @LastModifiedDate
-  @Column(name = "last_modified_date")
-  private Long lastModifiedDate = System.currentTimeMillis();
+  @Column(name = "updated_at")
+  private Long updatedAt = System.currentTimeMillis();
 
   @Column(name = "is_deleted", columnDefinition = "boolean default false")
   private Boolean isDeleted;

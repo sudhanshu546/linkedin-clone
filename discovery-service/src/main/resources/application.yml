@@ -1,18 +1,9 @@
 server:
-  port: ${PORT:8761}
+  port: 8761
 
 spring:
   application:
     name: discovery
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health
-  endpoint:
-    health:
-      show-details: always
 
 eureka:
   client:

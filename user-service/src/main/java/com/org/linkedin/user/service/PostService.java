@@ -12,12 +12,13 @@ import com.org.linkedin.user.repository.CommentRepository;
 import com.org.linkedin.user.repository.LikeRepository;
 import com.org.linkedin.user.repository.PostRepository;
 import com.org.linkedin.user.repository.UserRepository;
-import com.org.linkedin.user.service.storage.FileStorageService;
 import com.org.linkedin.utility.service.KafkaEventPublisher;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+
+import com.org.linkedin.utility.storage.FileStorageService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -90,13 +91,11 @@ public class PostService {
             .content(content)
             .imageUrl(imageUrls.isEmpty() ? null : imageUrls.get(0))
             .imageUrls(imageUrls)
-            .createdAt(LocalDateTime.now())
             .build();
 
     post = postRepository.save(post);
 
-    String fullName =
-        user.getFirstName() + (user.getLastName() != null ? " " + user.getLastName() : "");
+    String fullName = user.getFirstName() + (user.getLastName() != null ? " " + user.getLastName() : "");
     String designation = "LinkedIn Member";
 
     // Publish Kafka Event
@@ -115,12 +114,11 @@ public class PostService {
 
   public void likePost(Authentication authentication, UUID postId) {
     TUserDTO user = getUserDetails(authentication);
-    String fullName =
-        user.getFirstName() + (user.getLastName() != null ? " " + user.getLastName() : "");
+    String fullName = user.getFirstName() + (user.getLastName() != null ? " " + user.getLastName() : "");
     String designation = "LinkedIn Member";
 
-    Post post =
-        postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new RuntimeException("Post not found"));
 
     if (likeRepository.findByPostIdAndUserId(postId, user.getId()).isPresent()) {
       return;
@@ -144,12 +142,11 @@ public class PostService {
 
   public Comment addComment(Authentication authentication, UUID postId, String content) {
     TUserDTO user = getUserDetails(authentication);
-    String fullName =
-        user.getFirstName() + (user.getLastName() != null ? " " + user.getLastName() : "");
+    String fullName = user.getFirstName() + (user.getLastName() != null ? " " + user.getLastName() : "");
     String designation = "LinkedIn Member";
 
-    Post post =
-        postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new RuntimeException("Post not found"));
 
     Comment comment =
         Comment.builder()
@@ -158,7 +155,6 @@ public class PostService {
             .userName(fullName)
             .userDesignation(designation)
             .content(content)
-            .createdAt(LocalDateTime.now())
             .build();
     comment = commentRepository.save(comment);
 
@@ -196,15 +192,41 @@ public class PostService {
 
   public void deleteComment(Authentication authentication, UUID commentId) {
     TUserDTO user = getUserDetails(authentication);
-    Comment comment =
-        commentRepository
-            .findById(commentId)
-            .orElseThrow(() -> new RuntimeException("Comment not found"));
-
+    Comment comment = commentRepository.findById(commentId)
+        .orElseThrow(() -> new RuntimeException("Comment not found"));
+    
     if (!comment.getUserId().equals(user.getId())) {
       throw new RuntimeException("Unauthorized to delete this comment");
     }
-
+    
     commentRepository.delete(comment);
+  }
+
+  public void deletePost(Authentication authentication, UUID postId) {
+    TUserDTO user = getUserDetails(authentication);
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new RuntimeException("Post not found"));
+    
+    if (!post.getUserId().equals(user.getId())) {
+      throw new RuntimeException("Unauthorized to delete this post");
+    }
+    
+    // Delete associated likes and comments first (or let DB cascade if configured)
+    likeRepository.deleteByPostId(postId);
+    commentRepository.deleteByPostId(postId);
+    postRepository.delete(post);
+  }
+
+  public Post updatePost(Authentication authentication, UUID postId, String content) {
+    TUserDTO user = getUserDetails(authentication);
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new RuntimeException("Post not found"));
+    
+    if (!post.getUserId().equals(user.getId())) {
+      throw new RuntimeException("Unauthorized to update this post");
+    }
+    
+    post.setContent(content);
+    return postRepository.save(post);
   }
 }

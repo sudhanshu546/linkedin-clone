@@ -66,7 +66,7 @@ public class ActivityFeedService {
                     .timestamp(LocalDateTime.now())
                     .build();
             
-            item.setCreatedDate(System.currentTimeMillis());
+            item.setCreatedAt(System.currentTimeMillis());
             item.setIsDeleted(false);
             item.setIsEnabled(true);
             
@@ -113,7 +113,11 @@ public class ActivityFeedService {
     }
 
     @Transactional(readOnly = true)
-    public List<ActivityFeedItem> getFeedForUser(UUID userId, org.springframework.data.domain.Pageable pageable) {
+    public org.springframework.data.domain.Page<ActivityFeedItem> getFeedForUser(UUID userId, org.springframework.data.domain.Pageable pageable) {
+        return activityFeedItemRepository.findByUserIdOrderByTimestampDesc(userId, pageable);
+    }
+
+    public org.springframework.data.domain.Page<ActivityFeedItem> getFeedForUserPaginated(UUID userId, org.springframework.data.domain.Pageable pageable) {
         return activityFeedItemRepository.findByUserIdOrderByTimestampDesc(userId, pageable);
     }
 }

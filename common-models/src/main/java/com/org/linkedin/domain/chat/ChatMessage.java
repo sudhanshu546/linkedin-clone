@@ -1,7 +1,7 @@
 package com.org.linkedin.domain.chat;
 
+import com.org.linkedin.domain.AbstractAuditingEntity;
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.*;
 
@@ -12,7 +12,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ChatMessage {
+public class ChatMessage extends AbstractAuditingEntity<UUID> {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
@@ -29,7 +29,4 @@ public class ChatMessage {
   @Builder.Default
   @Column(name = "is_read", nullable = false)
   private boolean isRead = false;
-
-  @Column(name = "timestamp")
-  private LocalDateTime timestamp = LocalDateTime.now();
 }

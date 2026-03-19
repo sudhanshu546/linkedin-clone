@@ -2,20 +2,24 @@ package com.org.linkedin.profile.service.impl;
 
 import com.org.linkedin.domain.Profile;
 import com.org.linkedin.dto.ProfileDTO;
+import com.org.linkedin.dto.event.ProfileViewedEvent;
 import com.org.linkedin.dto.user.TUserDTO;
 import com.org.linkedin.profile.mapper.ProfileMapper;
 import com.org.linkedin.profile.repo.ProfileRepo;
 import com.org.linkedin.profile.service.ProfileService;
 import com.org.linkedin.utility.client.UserService;
 import com.org.linkedin.utility.service.KafkaEventPublisher;
-import com.org.linkedin.dto.event.ProfileViewedEvent;
+import com.org.linkedin.utility.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +28,7 @@ public class ProfileServiceImpl implements ProfileService {
     private final ProfileRepo profileRepo;
     private final UserService userService;
     private final KafkaEventPublisher kafkaEventPublisher;
+    private final FileStorageService fileStorageService;
 
     @Value("${kafka.topics.profile-viewed}")
     private String profileViewedTopic;
@@ -55,7 +60,6 @@ public class ProfileServiceImpl implements ProfileService {
 
     @Override
     public ProfileDTO saveOrUpdate(UUID userId, ProfileDTO profileDTO) {
-
         TUserDTO tUserDTO  = userService.getUserByKeyCloakId(userId).getBody().getResult();
         Profile existingProfile = profileRepo.findByUserId(tUserDTO.getId());
         Profile profile;
@@ -71,10 +75,23 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     @Override
-    public java.util.List<ProfileDTO> searchProfiles(String city, String state, String company, String headline) {
-        return profileRepo.searchProfiles(city, state, company, headline)
+    public List<ProfileDTO> searchProfiles(String query, String city, String state, String company, String headline, String sortBy, String sortOrder) {
+        return profileRepo.searchProfiles(query, city, state, company, headline, sortBy)
                 .stream()
                 .map(profileMapper::toDto)
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public String updateCoverImage(UUID userId, org.springframework.web.multipart.MultipartFile image) throws IOException {
+        TUserDTO tUserDTO  = userService.getUserByKeyCloakId(userId).getBody().getResult();
+        Profile profile = profileRepo.findByUserId(tUserDTO.getId());
+        if (profile == null) {
+            throw new RuntimeException("Profile not found");
+        }
+        String imageUrl = fileStorageService.storeFile(image);
+        profile.setCoverImageUrl(imageUrl);
+        profileRepo.save(profile);
+        return imageUrl;
     }
 }

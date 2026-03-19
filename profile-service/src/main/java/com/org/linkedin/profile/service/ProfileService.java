@@ -11,5 +11,7 @@ public interface ProfileService {
 
     ProfileDTO saveOrUpdate(UUID userId, ProfileDTO profileDTO);
 
-    List<ProfileDTO> searchProfiles(String city, String state, String company, String headline);
+    List<ProfileDTO> searchProfiles(String query, String city, String state, String company, String headline, String sortBy, String sortOrder);
+
+    String updateCoverImage(UUID userId, org.springframework.web.multipart.MultipartFile image) throws java.io.IOException;
 }

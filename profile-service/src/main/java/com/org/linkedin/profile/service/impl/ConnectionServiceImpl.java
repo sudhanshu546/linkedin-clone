@@ -2,8 +2,9 @@ package com.org.linkedin.profile.service.impl;
 
 import com.org.linkedin.domain.Connection;
 import com.org.linkedin.domain.enumeration.ConnectionStatus;
-import com.org.linkedin.dto.user.TUserDTO;
+import com.org.linkedin.dto.connection.ConnectionDTO;
 import com.org.linkedin.dto.connection.UserConnectionStatusDTO;
+import com.org.linkedin.profile.mapper.ConnectionMapper;
 import com.org.linkedin.profile.repo.ConnectionRepository;
 import com.org.linkedin.profile.service.ConnectionService;
 import com.org.linkedin.utility.client.UserService;
@@ -26,10 +27,9 @@ import java.util.stream.Stream;
 @Slf4j
 public class ConnectionServiceImpl implements ConnectionService {
     private final UserService userService;
-
     private final ConnectionRepository repository;
-
     private final KafkaEventPublisher kafkaEventPublisher;
+    private final ConnectionMapper connectionMapper;
 
     @Value("${kafka.topics.connection-requested}")
     private String connectionRequestedTopic;
@@ -39,7 +39,6 @@ public class ConnectionServiceImpl implements ConnectionService {
 
     @Override
     public void sendRequest(Authentication authentication, UUID receiverId) {
-
         UUID requesterId = userService.getUserByKeyCloakId(UUID.fromString(authentication.getName())).getBody().getResult().getId();
         log.info("Sending connection request from {} to {}", requesterId, receiverId);
 
@@ -47,7 +46,6 @@ public class ConnectionServiceImpl implements ConnectionService {
             throw new RuntimeException("Cannot connect with yourself");
         }
 
-        // Check both directions
         boolean alreadyExists = repository.findByRequesterIdAndReceiverId(requesterId, receiverId).isPresent() ||
                                repository.findByRequesterIdAndReceiverId(receiverId, requesterId).isPresent();
 
@@ -61,7 +59,6 @@ public class ConnectionServiceImpl implements ConnectionService {
         connection.setStatus(ConnectionStatus.PENDING);
         repository.save(connection);
 
-        // Publish Connection Requested Event
         ConnectionRequestedEvent event = ConnectionRequestedEvent.builder()
                 .senderId(requesterId)
                 .receiverId(receiverId)
@@ -72,26 +69,16 @@ public class ConnectionServiceImpl implements ConnectionService {
 
     @Override
     public void respondToRequest(Authentication authentication, UUID connectionId, boolean accept) {
-        log.info("Responding to connection request {}: accept={}", connectionId, accept);
-
         UUID userId = userService.getUserByKeyCloakId(UUID.fromString(authentication.getName())).getBody().getResult().getId();
-        log.info("Authenticated user internal ID: {}", userId);
-
         Connection connection = repository.findById(connectionId)
             .orElseThrow(() -> new RuntimeException("Request not found"));
-        log.info("Found connection: requester={}, receiver={}, status={}", connection.getRequesterId(), connection.getReceiverId(), connection.getStatus());
 
         if (!connection.getReceiverId().equals(userId)) {
-            log.error("Unauthorized: Connection receiver ID {} does not match user ID {}", connection.getReceiverId(), userId);
             throw new RuntimeException("Unauthorized");
         }
 
-        connection.setStatus(
-            accept ? ConnectionStatus.ACCEPTED : ConnectionStatus.REJECTED
-        );
-
+        connection.setStatus(accept ? ConnectionStatus.ACCEPTED : ConnectionStatus.REJECTED);
         repository.save(connection);
-        log.info("Updated connection status to {}", connection.getStatus());
 
         if (accept) {
             com.org.linkedin.dto.event.ConnectionAcceptedEvent event = com.org.linkedin.dto.event.ConnectionAcceptedEvent.builder()
@@ -118,39 +105,33 @@ public class ConnectionServiceImpl implements ConnectionService {
         }
 
         repository.delete(connection);
-        log.info("Connection request {} cancelled by user {}", connectionId, userId);
     }
 
     @Override
-    public List<UUID> getMyConnections(Authentication authentication) {
-
+    public List<ConnectionDTO> getMyConnections(Authentication authentication) {
         UUID userId = userService.getUserByKeyCloakId(UUID.fromString(authentication.getName())).getBody().getResult().getId();
-        List<Connection> sent =
-            repository.findByRequesterIdAndStatus(
-                userId, ConnectionStatus.ACCEPTED);
-
-        List<Connection> received =
-            repository.findByReceiverIdAndStatus(
-                userId, ConnectionStatus.ACCEPTED);
-
-        return Stream.concat(sent.stream(), received.stream())
-            .map(c -> c.getRequesterId().equals(userId)
-                    ? c.getReceiverId()
-                    : c.getRequesterId())
-            .toList();
+        List<Connection> sent = repository.findByRequesterIdAndStatus(userId, ConnectionStatus.ACCEPTED);
+        List<Connection> received = repository.findByReceiverIdAndStatus(userId, ConnectionStatus.ACCEPTED);
+        List<Connection> merged = Stream.concat(sent.stream(), received.stream()).toList();
+        return connectionMapper.toDto(merged);
     }
 
     @Override
-    public List<Connection> getPendingRequests(Authentication authentication) {
+    public List<ConnectionDTO> getPendingRequests(Authentication authentication) {
         UUID userId = userService.getUserByKeyCloakId(UUID.fromString(authentication.getName())).getBody().getResult().getId();
-        return repository.findByReceiverIdAndStatus(userId, ConnectionStatus.PENDING);
+        List<Connection> pending = repository.findByReceiverIdAndStatus(userId, ConnectionStatus.PENDING);
+        return connectionMapper.toDto(pending);
+    }
+
+    @Override
+    public List<UUID> findMutualConnections(UUID otherUserId) {
+        return java.util.Collections.emptyList();
     }
 
     @Override
     public UserConnectionStatusDTO getConnectionStatus(Authentication authentication, UUID otherUserId) {
         UUID userId = userService.getUserByKeyCloakId(UUID.fromString(authentication.getName())).getBody().getResult().getId();
 
-        // 1. Check if logged-in user is the requester
         Optional<Connection> sent = repository.findByRequesterIdAndReceiverId(userId, otherUserId);
         if (sent.isPresent()) {
             return UserConnectionStatusDTO.builder()
@@ -160,7 +141,6 @@ public class ConnectionServiceImpl implements ConnectionService {
                     .build();
         }
 
-        // 2. Check if logged-in user is the receiver
         Optional<Connection> received = repository.findByRequesterIdAndReceiverId(otherUserId, userId);
         if (received.isPresent()) {
             return UserConnectionStatusDTO.builder()

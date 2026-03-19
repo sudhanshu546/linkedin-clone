@@ -63,4 +63,15 @@ public class PostController {
   public List<Comment> getComments(@PathVariable UUID postId) {
     return postService.getComments(postId);
   }
+
+  @DeleteMapping("/{postId}")
+  public void deletePost(@PathVariable UUID postId, Authentication authentication) {
+    postService.deletePost(authentication, postId);
+  }
+
+  @PutMapping("/{postId}")
+  public Post updatePost(
+      @PathVariable UUID postId, @RequestBody String content, Authentication authentication) {
+    return postService.updatePost(authentication, postId, content);
+  }
 }

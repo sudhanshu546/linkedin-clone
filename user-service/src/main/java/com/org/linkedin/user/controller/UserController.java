@@ -30,7 +30,9 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-/** Consolidated User Controller */
+/**
+ * Consolidated User Controller
+ */
 @RestController
 @RequestMapping("${apiPrefix}/user")
 @Slf4j
@@ -41,19 +43,22 @@ public class UserController {
   private final UserService userService;
   private final KeycloakClients keycloakClient;
 
-  /** Register a new user. */
+  /**
+   * Register a new user.
+   */
   @PostMapping("/add")
   public ResponseEntity<BaseResponse<Void>> createUser(@Valid @RequestBody TUserDTO userDTO) {
     log.trace("Enter createUser method :: [{}]", userDTO);
     userService.save(userDTO, keycloakClient.clientName());
-    return ResponseEntity.ok(
-        BaseResponse.<Void>builder()
+    return ResponseEntity.ok(BaseResponse.<Void>builder()
             .status(HttpStatus.CREATED.value())
             .message("User created successfully.")
             .build());
   }
 
-  /** Update user details with optional profile image. */
+  /**
+   * Update user details with optional profile image.
+   */
   @Operation(summary = "Update user profile details and/or image")
   @PutMapping("/update")
   public ResponseEntity<BaseResponse<String>> updateUser(
@@ -62,21 +67,20 @@ public class UserController {
       throws IOException {
     log.trace("Enter updateUser method:: userDTO [{}]", userDTO);
     userService.updateUserById(userDTO.getId(), image, userDTO);
-    return ResponseEntity.ok(
-        BaseResponse.<String>builder()
+    return ResponseEntity.ok(BaseResponse.<String>builder()
             .status(HttpStatus.OK.value())
             .message("User Updated successfully")
             .build());
   }
 
-  /** Get details of the currently authenticated user. */
+  /**
+   * Get details of the currently authenticated user.
+   */
   @GetMapping("/me")
-  public ResponseEntity<BaseResponse<TUserDTO>> getAuthenticatedUser(
-      Authentication authentication) {
+  public ResponseEntity<BaseResponse<TUserDTO>> getAuthenticatedUser(Authentication authentication) {
     log.trace("Enter getAuthenticatedUser method.");
     TUserDTO userDetails = userService.getUserDetailsByAuthentication(authentication);
-    return ResponseEntity.ok(
-        BaseResponse.<TUserDTO>builder()
+    return ResponseEntity.ok(BaseResponse.<TUserDTO>builder()
             .status(HttpStatus.OK.value())
             .message(SUCCESS)
             .result(userDetails)
@@ -90,45 +94,50 @@ public class UserController {
   @GetMapping({"/{id}", "/user/{id}"})
   public ResponseEntity<BaseResponse<TUserDTO>> getUser(@PathVariable UUID id) {
     log.trace("Enter getUser method :: id [{}]", id);
-    TUserDTO userDTO =
-        userService.findOne(id).orElseGet(() -> userService.findUserByKeyCloakId(id));
-
-    return ResponseEntity.ok(
-        BaseResponse.<TUserDTO>builder().status(HttpStatus.OK.value()).result(userDTO).build());
+    TUserDTO userDTO = userService.findOne(id)
+        .orElseGet(() -> userService.findUserByKeyCloakId(id));
+    
+    return ResponseEntity.ok(BaseResponse.<TUserDTO>builder()
+            .status(HttpStatus.OK.value())
+            .result(userDTO)
+            .build());
   }
 
-  /** Delete a user. */
+  /**
+   * Delete a user.
+   */
   @PreAuthorize("hasRole('SystemAdmin') or hasRole('Tenant')")
   @DeleteMapping("/{id}")
   public ResponseEntity<BaseResponse<Void>> delete(@PathVariable UUID id) {
     log.trace("Enter delete method :: id [{}]", id);
     userService.delete(keycloakClient.clientName(), id);
-    return ResponseEntity.ok(
-        BaseResponse.<Void>builder()
+    return ResponseEntity.ok(BaseResponse.<Void>builder()
             .status(HttpStatus.OK.value())
             .message("Data deleted successfully")
             .build());
   }
 
-  /** Search users by name or email. */
+  /**
+   * Search users by name or email.
+   */
   @GetMapping("/search")
   public ResponseEntity<BaseResponse<List<TUserDTO>>> searchUsers(@RequestParam String query) {
     List<TUserDTO> users = userService.searchUsers(query);
-    return ResponseEntity.ok(
-        BaseResponse.<List<TUserDTO>>builder()
+    return ResponseEntity.ok(BaseResponse.<List<TUserDTO>>builder()
             .status(HttpStatus.OK.value())
             .message(SUCCESS)
             .result(users)
             .build());
   }
 
-  /** Paginated list of all users. */
+  /**
+   * Paginated list of all users.
+   */
   @PreAuthorize("hasRole('SystemAdmin') or hasRole('Tenant')")
   @GetMapping("/getAllUserDetail")
   public ResponseEntity<BaseResponse<List<TUserDTO>>> getAllUserDetail(Pageable pageable) {
     Page<TUserDTO> userDetails = userService.getAllUserDetail(pageable);
-    return ResponseEntity.ok(
-        BasePageResponse.<List<TUserDTO>>builder()
+    return ResponseEntity.ok(BasePageResponse.<List<TUserDTO>>builder()
             .status(HttpStatus.OK.value())
             .message(SUCCESS)
             .result(userDetails.getContent())
@@ -138,59 +147,61 @@ public class UserController {
             .build());
   }
 
-  /** Reset password for authenticated user. */
+  /**
+   * Reset password for authenticated user.
+   */
   @PutMapping("/reset-password")
   public ResponseEntity<BaseResponse<String>> resetPassword(
       Authentication authentication,
       @RequestBody @Valid ChangePassword changePassword,
       BindingResult bindingResult) {
     if (bindingResult.hasErrors()) {
-      String errors =
-          bindingResult.getAllErrors().stream()
+      String errors = bindingResult.getAllErrors().stream()
               .map(ObjectError::getDefaultMessage)
               .collect(Collectors.joining(", "));
       throw new CommonExceptionHandler(errors, HttpStatus.BAD_REQUEST.value());
     }
     String clientName = (((Jwt) authentication.getPrincipal()).getClaims()).get("azp").toString();
     userService.resetPassword(changePassword, clientName);
-    return ResponseEntity.ok(
-        BaseResponse.<String>builder()
+    return ResponseEntity.ok(BaseResponse.<String>builder()
             .status(HttpStatus.OK.value())
             .message("Password Updated successfully")
             .build());
   }
 
-  /** Request forgot password link. */
+  /**
+   * Request forgot password link.
+   */
   @GetMapping("/getForgotLink")
-  public ResponseEntity<BaseResponse<String>> sendForgotLink(@RequestParam String email)
-      throws Exception {
+  public ResponseEntity<BaseResponse<String>> sendForgotLink(@RequestParam String email) throws Exception {
     String forgotlink = userService.sendForgotLink(email);
-    return ResponseEntity.ok(
-        BaseResponse.<String>builder()
+    return ResponseEntity.ok(BaseResponse.<String>builder()
             .status(HttpStatus.OK.value())
             .message("Link Sent Successfully on Mail")
             .result(forgotlink)
             .build());
   }
 
-  /** Process forgot password token. */
+  /**
+   * Process forgot password token.
+   */
   @PostMapping("/forgotPassword")
   public ResponseEntity<BaseResponse<String>> forgotPassword(
       @RequestParam String token, @RequestBody ChangePassword changePassword) throws Exception {
     userService.forgotPassword(token, changePassword);
-    return ResponseEntity.ok(
-        BaseResponse.<String>builder()
+    return ResponseEntity.ok(BaseResponse.<String>builder()
             .status(HttpStatus.OK.value())
             .message("Password Updated Successfully")
             .build());
   }
 
-  /** Deprecated Legacy Image Upload (Use /update instead). */
+  /**
+   * Deprecated Legacy Image Upload (Use /update instead).
+   */
   @PostMapping("/saveImage")
   public ResponseEntity<BaseResponse<String>> saveImage(
       @RequestParam("file") MultipartFile file, Authentication authentication) throws IOException {
     userService.saveImage(file, authentication);
-    return ResponseEntity.ok(
-        BaseResponse.<String>builder().status(HttpStatus.OK.value()).message(SUCCESS).build());
+    return ResponseEntity.ok(BaseResponse.<String>builder().status(HttpStatus.OK.value()).message(SUCCESS).build());
   }
 }

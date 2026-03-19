@@ -1,7 +1,7 @@
 package com.org.linkedin.domain.job;
 
+import com.org.linkedin.domain.AbstractAuditingEntity;
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.*;
 
@@ -12,7 +12,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Job {
+public class Job extends AbstractAuditingEntity<UUID> {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
@@ -34,7 +34,4 @@ public class Job {
 
   @Column(name = "posted_by", nullable = false)
   private UUID postedBy; // Internal User ID
-
-  @Column(name = "created_at")
-  private LocalDateTime createdAt = LocalDateTime.now();
 }

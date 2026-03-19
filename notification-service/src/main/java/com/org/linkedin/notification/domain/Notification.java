@@ -1,9 +1,9 @@
 package com.org.linkedin.notification.domain;
 
+import com.org.linkedin.domain.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.UUID;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "notification")
@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Notification {
+public class Notification extends AbstractAuditingEntity<UUID> {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -30,8 +30,6 @@ public class Notification {
     private String message;
 
     @Column(name = "is_read")
-    private boolean read = false;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
+    @Builder.Default
+    private boolean isRead = false;
 }

@@ -1,9 +1,12 @@
 package com.org.linkedin.profile.controller;
 
+import com.org.linkedin.dto.BaseResponse;
+import com.org.linkedin.dto.connection.ConnectionDTO;
 import com.org.linkedin.dto.connection.ConnectionRequestDTO;
 import com.org.linkedin.dto.connection.UserConnectionStatusDTO;
 import com.org.linkedin.profile.service.ConnectionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,46 +21,79 @@ public class ConnectionController {
     private final ConnectionService connectionService;
 
     @PostMapping("/request")
-    public void sendRequest(
+    public BaseResponse<Void> sendRequest(
         Authentication authentication,
         @RequestBody ConnectionRequestDTO dto
     ) {
-//        UUID userId = UUID.fromString(token.getToken().getSubject());
         connectionService.sendRequest(authentication, dto.getReceiverId());
+        return BaseResponse.<Void>builder()
+                .status(HttpStatus.OK.value())
+                .message("Connection request sent")
+                .build();
     }
 
     @PostMapping("/{id}/respond")
-    public void respond(
+    public BaseResponse<Void> respond(
         Authentication authentication,
         @PathVariable UUID id,
         @RequestParam("accept") boolean accept
     ) {
         connectionService.respondToRequest(authentication, id, accept);
+        return BaseResponse.<Void>builder()
+                .status(HttpStatus.OK.value())
+                .message(accept ? "Connection accepted" : "Connection rejected")
+                .build();
     }
 
     @DeleteMapping("/{id}/cancel")
-    public void cancelRequest(
+    public BaseResponse<Void> cancelRequest(
             Authentication authentication,
             @PathVariable UUID id
     ) {
         connectionService.cancelRequest(authentication, id);
+        return BaseResponse.<Void>builder()
+                .status(HttpStatus.OK.value())
+                .message("Connection request cancelled")
+                .build();
     }
 
     @GetMapping
-    public List<UUID> myConnections(Authentication authentication) {
-        return connectionService.getMyConnections(authentication);
+    public BaseResponse<List<ConnectionDTO>> myConnections(Authentication authentication) {
+        List<ConnectionDTO> result = connectionService.getMyConnections(authentication);
+        return BaseResponse.<List<ConnectionDTO>>builder()
+                .status(HttpStatus.OK.value())
+                .result(result)
+                .build();
     }
 
     @GetMapping("/pending")
-    public List<com.org.linkedin.domain.Connection> getPending(Authentication authentication) {
-        return connectionService.getPendingRequests(authentication);
+    public BaseResponse<List<ConnectionDTO>> getPending(Authentication authentication) {
+        List<ConnectionDTO> result = connectionService.getPendingRequests(authentication);
+        return BaseResponse.<List<ConnectionDTO>>builder()
+                .status(HttpStatus.OK.value())
+                .result(result)
+                .build();
     }
 
     @GetMapping("/status/{otherUserId}")
-    public UserConnectionStatusDTO getStatus(
+    public BaseResponse<UserConnectionStatusDTO> getStatus(
             Authentication authentication,
             @PathVariable UUID otherUserId
     ) {
-        return connectionService.getConnectionStatus(authentication, otherUserId);
+        UserConnectionStatusDTO result = connectionService.getConnectionStatus(authentication, otherUserId);
+        return BaseResponse.<UserConnectionStatusDTO>builder()
+                .status(HttpStatus.OK.value())
+                .result(result)
+                .build();
+    }
+
+    @GetMapping("/recommendations")
+    public BaseResponse<List<UUID>> getRecommendations(Authentication authentication) {
+        UUID userId = UUID.fromString(authentication.getName());
+        List<UUID> result = connectionService.findMutualConnections(userId);
+        return BaseResponse.<List<UUID>>builder()
+                .status(HttpStatus.OK.value())
+                .result(result)
+                .build();
     }
 }

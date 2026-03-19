@@ -1,17 +1,16 @@
 package com.org.linkedin.chat.controller;
 
-import com.org.linkedin.chat.repo.ChatMessageRepository;
-import com.org.linkedin.domain.chat.ChatMessage;
-import com.org.linkedin.utility.client.UserService;
+import com.org.linkedin.dto.BaseResponse;
+import com.org.linkedin.dto.chat.ChatMessageDTO;
+import com.org.linkedin.chat.service.ChatService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,38 +20,35 @@ import java.util.UUID;
 public class ChatController {
 
     private final SimpMessagingTemplate messagingTemplate;
-    private final ChatMessageRepository chatMessageRepository;
-    private final UserService userService;
+    private final ChatService chatService;
 
     @MessageMapping("/chat")
-    public void processMessage(@Payload ChatMessage chatMessage) {
-        chatMessage.setTimestamp(LocalDateTime.now());
-        chatMessage.setRead(false);
-        ChatMessage saved = chatMessageRepository.save(chatMessage);
+    public void processMessage(@Payload ChatMessageDTO chatMessageDTO) {
+        ChatMessageDTO saved = chatService.saveMessage(chatMessageDTO);
         
         messagingTemplate.convertAndSendToUser(
-                chatMessage.getRecipientId().toString(), "/queue/messages",
+                saved.getRecipientId().toString(), "/queue/messages",
                 saved
         );
     }
 
     @GetMapping("/{recipientId}")
-    public List<ChatMessage> findChatMessages(
+    public BaseResponse<List<ChatMessageDTO>> findChatMessages(
             Authentication authentication,
             @PathVariable UUID recipientId) {
-        UUID keycloakId = UUID.fromString(authentication.getName());
-        UUID senderId = userService.getUserByKeyCloakId(keycloakId).getBody().getResult().getId();
-        
-        return chatMessageRepository.findBySenderIdAndRecipientIdOrSenderIdAndRecipientIdOrderByTimestampAsc(
-                senderId, recipientId, recipientId, senderId
-        );
+        List<ChatMessageDTO> result = chatService.getChatMessages(authentication, recipientId);
+        return BaseResponse.<List<ChatMessageDTO>>builder()
+                .status(HttpStatus.OK.value())
+                .result(result)
+                .build();
     }
 
     @PatchMapping("/read/{senderId}")
-    public ResponseEntity<Void> markAsRead(Authentication authentication, @PathVariable UUID senderId) {
-        UUID keycloakId = UUID.fromString(authentication.getName());
-        UUID recipientId = userService.getUserByKeyCloakId(keycloakId).getBody().getResult().getId();
-        chatMessageRepository.markMessagesAsRead(recipientId, senderId);
-        return ResponseEntity.ok().build();
+    public BaseResponse<Void> markAsRead(Authentication authentication, @PathVariable UUID senderId) {
+        chatService.markAsRead(authentication, senderId);
+        return BaseResponse.<Void>builder()
+                .status(HttpStatus.OK.value())
+                .message("Messages marked as read")
+                .build();
     }
 }

@@ -1,5 +1,5 @@
 server:
-  port: ${PORT:8081}
+  port: 8081
 
 apiPrefix: /js
 
@@ -9,7 +9,7 @@ eureka:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
   instance:
     preferIpAddress: true
-    hostname: ${REGISTRATION_IP:localhost}
+    hostname: localhost
 
 spring:
   application:
@@ -20,21 +20,17 @@ spring:
       ddl-auto: update
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/job_service_db}
-    username: ${DB_USER:postgres}
+    url: ${DB_URI:jdbc:postgresql://localhost:5432/job_service_db}
+    username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
   security:
     oauth2:
       resourceserver:
         jwt:
           jws-algorithm: RS256
-          issuer-uri: ${KEYCLOAK_URL:http://keycloak-placeholder}/realms/linkedin
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/linkedin
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
-    properties:
-      security.protocol: ${KAFKA_RETRY_SECURITY_PROTOCOL:PLAINTEXT}
-      sasl.mechanism: SCRAM-SHA-256
-      sasl.jaas.config: ${KAFKA_JAAS_CONFIG}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
 openapi:
   service:

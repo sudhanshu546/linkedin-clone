@@ -1,4 +1,4 @@
-package com.org.linkedin.user.service.storage;
+package com.org.linkedin.utility.storage;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,9 +31,10 @@ public class LocalFileStorageService implements FileStorageService {
   @Override
   public void deleteFile(String fileUrl) {
     try {
-      Files.deleteIfExists(Paths.get(uploadDir).resolve(fileUrl));
+      Path file = Paths.get(uploadDir).resolve(fileUrl);
+      Files.deleteIfExists(file);
     } catch (IOException e) {
-      // Log error
+      throw new RuntimeException("Error: " + e.getMessage());
     }
   }
 }

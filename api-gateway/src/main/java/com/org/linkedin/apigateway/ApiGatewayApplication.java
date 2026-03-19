@@ -32,7 +32,7 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
     })
 public class ApiGatewayApplication {
 
-  @Value("${app.cors.allowed-origins:/*,http://localhost:3000}")
+  @Value("${app.cors.allowed-origins:http://localhost:3000}")
   private List<String> allowedOrigins;
 
   public static void main(String[] args) {
@@ -54,8 +54,14 @@ public class ApiGatewayApplication {
                     .permitAll()
                     .pathMatchers("/us/uploads/**")
                     .permitAll()
+                    // Allow SockJS/WebSocket handshake to pass through so the downstream service
+                    // can authenticate the access_token query parameter.
+                    .pathMatchers("/ws-chat/**")
+                    .permitAll()
+                    .pathMatchers("/ws/**")
+                    .permitAll()
                     .anyExchange()
-                    .permitAll())
+                    .authenticated())
         .oauth2ResourceServer((oauth) -> oauth.jwt(Customizer.withDefaults()))
         .build();
   }

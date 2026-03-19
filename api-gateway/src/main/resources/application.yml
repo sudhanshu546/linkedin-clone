@@ -5,7 +5,7 @@ logging:
     io.github.resilience4j: DEBUG
 
 server:
-  port: ${PORT:9191}
+  port: 9191
 
 spring:
   application:
@@ -22,7 +22,7 @@ spring:
       resourceserver:
         jwt:
           jws-algorithm: RS256
-          issuer-uri: ${KEYCLOAK_URL:http://keycloak-placeholder}/realms/linkedin
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/linkedin
           jwk-set-uri: ${spring.security.oauth2.resourceserver.jwt.issuer-uri}/protocol/openid-connect/certs
 
   cloud:
@@ -31,7 +31,12 @@ spring:
         cors-configurations:
           '[/**]':
             allowedOrigins: "http://localhost:3000"
-            allowedMethods: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
             allowedHeaders: "*"
             allowCredentials: true
       discovery:
@@ -106,7 +111,7 @@ eureka:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
   instance:
     preferIpAddress: true
-    hostname: ${REGISTRATION_IP:localhost}
+    hostname: localhost
 
 management:
   endpoint:

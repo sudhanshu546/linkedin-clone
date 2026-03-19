@@ -32,4 +32,6 @@ public class ProfileDTO {
 
   @NotBlank(message = "Designation is required")
   private String designation;
+
+  private String coverImageUrl;
 }

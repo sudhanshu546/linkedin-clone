@@ -1,4 +1,4 @@
-package com.org.linkedin.user.service.storage;
+package com.org.linkedin.utility.storage;
 
 import java.io.IOException;
 import org.springframework.web.multipart.MultipartFile;

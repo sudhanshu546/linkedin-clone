@@ -1,32 +1,21 @@
 package com.org.linkedin.dto.notification;
 
-import com.org.linkedin.dto.BaseDTO;
-import java.io.Serializable;
 import java.util.UUID;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
-public class NotificationDTO extends BaseDTO implements Serializable {
-
-  private static final long serialVersionUID = 1L;
-
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class NotificationDTO {
   private UUID id;
-
   private UUID recipientId;
-
-  private String notification;
-
-  private String heading;
-
-  private String url;
-
-  private String key;
-
-  private Integer type;
-
-  private String notificationIcon;
-
-  private Integer status;
-
-  private Integer isArchive;
+  private UUID senderId;
+  private String type;
+  private String message;
+  private boolean isRead;
+  private Long createdAt;
 }

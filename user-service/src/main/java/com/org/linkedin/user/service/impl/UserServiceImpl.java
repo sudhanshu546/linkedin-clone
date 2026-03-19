@@ -16,11 +16,11 @@ import com.org.linkedin.user.mapper.TUserMapper;
 import com.org.linkedin.user.repository.RoleRepository;
 import com.org.linkedin.user.repository.UserRepository;
 import com.org.linkedin.user.service.UserService;
-import com.org.linkedin.user.service.storage.FileStorageService;
 import com.org.linkedin.user.utility.KeyCloakUtil;
 import com.org.linkedin.utility.errors.ErrorKeys;
 import com.org.linkedin.utility.exception.CommonExceptionHandler;
 import com.org.linkedin.utility.service.CommonUtil;
+import com.org.linkedin.utility.storage.FileStorageService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.PersistenceContext;
@@ -366,12 +366,12 @@ public class UserServiceImpl implements UserService {
                 });
     existingUser.setFirstName(userDTO.getFirstName());
     existingUser.setLastName(userDTO.getLastName());
-
+    
     if (image != null && !image.isEmpty()) {
       String fileName = fileStorageService.storeFile(image);
       existingUser.setProfileImageUrl(fileName);
     }
-
+    
     existingUser = userRepository.save(existingUser);
     TUserDTO updatedUser = userMapper.toDto(existingUser);
     keyCloakUtil.updateUserDetailsInKeycloak(updatedUser, keycloakDemoClient);
@@ -464,12 +464,10 @@ public class UserServiceImpl implements UserService {
     } else if (contentType == null || !ALLOWED_FILE_TYPES.contains(contentType)) {
       throw new CommonExceptionHandler(INVALID_FILE_FORMAT, HttpStatus.BAD_REQUEST.value());
     }
-
-    TUser user =
-        userRepository
-            .findById(UUID.fromString(authentication.getName()))
-            .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
-
+    
+    TUser user = userRepository.findByKeycloakUserId(UUID.fromString(authentication.getName()))
+        .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
+    
     String fileName = fileStorageService.storeFile(file);
     user.setProfileImageUrl(fileName);
     userRepository.save(user);

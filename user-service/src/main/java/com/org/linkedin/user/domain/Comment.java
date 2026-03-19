@@ -1,7 +1,7 @@
 package com.org.linkedin.user.domain;
 
+import com.org.linkedin.domain.AbstractAuditingEntity;
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Comment {
+public class Comment extends AbstractAuditingEntity<UUID> {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
@@ -33,7 +33,4 @@ public class Comment {
 
   @Column(columnDefinition = "TEXT", nullable = false)
   private String content;
-
-  @Column(name = "created_at")
-  private LocalDateTime createdAt;
 }

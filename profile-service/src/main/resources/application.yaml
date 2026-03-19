@@ -1,5 +1,5 @@
 server:
-  port: ${PORT:8700}
+  port: 8700
 
 apiPrefix: /ps
 
@@ -9,7 +9,7 @@ eureka:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
   instance:
     preferIpAddress: true
-    hostname: ${REGISTRATION_IP:localhost}
+    hostname: localhost
 
 openapi:
   service:
@@ -32,8 +32,8 @@ spring:
       ddl-auto: update
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/profile_service_db}
-    username: ${DB_USER:postgres}
+    url: ${DB_URI:jdbc:postgresql://localhost:5432/profile_service_db}
+    username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
     hikari:
       poolName: Hikari
@@ -47,14 +47,10 @@ spring:
       resourceserver:
         jwt:
           jws-algorithm: RS256
-          issuer-uri: ${KEYCLOAK_URL:http://keycloak-placeholder}/realms/linkedin
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/linkedin
           jwk-set-uri: ${spring.security.oauth2.resourceserver.jwt.issuer-uri}/protocol/openid-connect/certs
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
-    properties:
-      security.protocol: ${KAFKA_RETRY_SECURITY_PROTOCOL:PLAINTEXT}
-      sasl.mechanism: SCRAM-SHA-256
-      sasl.jaas.config: ${KAFKA_JAAS_CONFIG}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
