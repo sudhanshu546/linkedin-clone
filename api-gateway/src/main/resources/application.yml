@@ -175,11 +175,5 @@ springdoc:
         url: /v3/api-docs
       - name: User Service
         url: /us/v3/api-docs
-      - name: Master Service
-        url: /ms/v3/api-docs
-      - name: Report Service
-        url: /rs/v3/api-docs
       - name: Notification Service
         url: /ns/v3/api-docs
-      - name: Device Connect Service
-        url: /dcs/v3/api-docs

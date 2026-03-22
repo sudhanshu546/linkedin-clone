@@ -18,7 +18,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
     basePackages = {"com.org.linkedin.utility", "com.org.linkedin.job"},
     basePackageClasses = FeignAuthenticationInterceptor.class)
 public class JobServiceApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(JobServiceApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(JobServiceApplication.class, args);
+  }
 }

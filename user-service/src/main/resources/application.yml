@@ -87,7 +87,7 @@ sendgrid:
   api:
     key: ${SENDGRID_API_KEY:dummy-api-key}
   emailConfig:
-    senderEmail: ${SENDER_EMAIL:manish.moryani@hashstudioz.com}
+    senderEmail: ${SENDER_EMAIL:sudhanshusaini546@gmail.com}
   templateId:
     forgotPassword: d-3a5ce38583da4ee38659219f282167b6
     registration: d-e2cd214da4b54ffcbbc3fea6cca0bf06
@@ -99,6 +99,3 @@ encryption:
 validation:
   file:
     size: 307200
-
-user:
-  createPasswordUrl: https://v2pine.dev.hashstudioz.com/user-login/createPassword?token=

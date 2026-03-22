@@ -14,21 +14,20 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @SpringBootApplication
 @EnableJpaAuditing
 @OpenAPIDefinition(
-        info =
+    info =
         @Info(
-                title = "Profile Service",
-                version = "1.0",
-                description = "Documentation Profile Service v1.0"))
+            title = "Profile Service",
+            version = "1.0",
+            description = "Documentation Profile Service v1.0"))
 @ComponentScan(
-        basePackages = {"com.org.linkedin.utility", "com.org.linkedin.profile" , "com.org.linkedin.dto"},
-        basePackageClasses = FeignAuthenticationInterceptor.class)
+    basePackages = {"com.org.linkedin.utility", "com.org.linkedin.profile", "com.org.linkedin.dto"},
+    basePackageClasses = FeignAuthenticationInterceptor.class)
 @EnableFeignClients("com.org.linkedin.utility.client")
 @EnableJpaRepositories(basePackages = "com.org.linkedin.profile.repo")
 @EntityScan(basePackages = {"com.org.linkedin.domain", "com.org.linkedin.profile.domain"})
 public class ProfileServiceApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(ProfileServiceApplication.class, args);
-	}
-
+  public static void main(String[] args) {
+    SpringApplication.run(ProfileServiceApplication.class, args);
+  }
 }

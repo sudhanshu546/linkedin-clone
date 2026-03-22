@@ -9,13 +9,10 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class NotificationPublisher {
 
-    private final SimpMessagingTemplate messagingTemplate;
+  private final SimpMessagingTemplate messagingTemplate;
 
-    public void pushNotification(Notification notification) {
-        messagingTemplate.convertAndSendToUser(
-            notification.getRecipientId().toString(), 
-            "/queue/notifications", 
-            notification
-        );
-    }
+  public void pushNotification(Notification notification) {
+    messagingTemplate.convertAndSendToUser(
+        notification.getRecipientId().toString(), "/queue/notifications", notification);
+  }
 }

@@ -5,5 +5,4 @@ import com.org.linkedin.dto.ProfileDTO;
 import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
-public interface ProfileMapper extends EntityMapper<ProfileDTO, Profile> {
-}
+public interface ProfileMapper extends EntityMapper<ProfileDTO, Profile> {}

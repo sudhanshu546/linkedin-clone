@@ -7,7 +7,4 @@ import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface JobApplicationMapper extends EntityMapper<JobApplicationDTO, JobApplication> {
-    @Override
-    @Mapping(source = "createdDate", target = "appliedDate")
-    JobApplicationDTO toDto(JobApplication entity);
 }

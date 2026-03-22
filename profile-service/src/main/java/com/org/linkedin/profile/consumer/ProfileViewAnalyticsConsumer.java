@@ -12,11 +12,13 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class ProfileViewAnalyticsConsumer {
 
-    private final ProfileViewAnalyticsService profileViewAnalyticsService;
+  private final ProfileViewAnalyticsService profileViewAnalyticsService;
 
-    @KafkaListener(topics = "${kafka.topics.profile-viewed}", groupId = "${spring.kafka.consumer.group-id}")
-    public void consumeProfileViewedEvent(ProfileViewedEvent event) {
-        log.info("Received ProfileViewedEvent: {}", event);
-        profileViewAnalyticsService.recordProfileView(event);
-    }
+  @KafkaListener(
+      topics = "${kafka.topics.profile-viewed}",
+      groupId = "${spring.kafka.consumer.group-id}")
+  public void consumeProfileViewedEvent(ProfileViewedEvent event) {
+    log.info("Received ProfileViewedEvent: {}", event);
+    profileViewAnalyticsService.recordProfileView(event);
+  }
 }

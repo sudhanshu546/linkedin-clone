@@ -12,8 +12,8 @@
     <modules>
         <module>common-models</module>
         <module>common-utility</module>
-        <module>discovery-service</module>
-        <module>api-gateway</module>
+<!--        <module>discovery-service</module>-->
+<!--        <module>api-gateway</module>-->
         <module>user-service</module>
         <module>profile-service</module>
         <module>notification-service</module>

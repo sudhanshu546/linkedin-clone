@@ -14,7 +14,7 @@ import org.springframework.context.annotation.ComponentScan;
     basePackages = {"com.org.linkedin.utility", "com.org.linkedin.notification"},
     basePackageClasses = FeignAuthenticationInterceptor.class)
 public class NotificationServiceApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(NotificationServiceApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(NotificationServiceApplication.class, args);
+  }
 }

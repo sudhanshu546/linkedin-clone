@@ -7,7 +7,7 @@ import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface ChatMapper extends EntityMapper<ChatMessageDTO, ChatMessage> {
-    @Override
-    @Mapping(source = "createdDate", target = "timestamp")
-    ChatMessageDTO toDto(ChatMessage entity);
+  @Override
+  @Mapping(source = "createdDate", target = "timestamp")
+  ChatMessageDTO toDto(ChatMessage entity);
 }

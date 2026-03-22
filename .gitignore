@@ -13,3 +13,4 @@ start.sh
 **/*.class
 **/maven-status/
 **/maven-archiver/
+.gitignore

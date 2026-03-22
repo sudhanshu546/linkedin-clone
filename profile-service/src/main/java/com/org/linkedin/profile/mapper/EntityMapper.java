@@ -1,11 +1,10 @@
 package com.org.linkedin.profile.mapper;
 
 import jakarta.inject.Named;
+import java.util.List;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
-
-import java.util.List;
 
 /**
  * Contract for a generic dto to entity mapper.

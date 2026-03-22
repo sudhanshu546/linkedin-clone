@@ -18,7 +18,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
     basePackages = {"com.org.linkedin.utility", "com.org.linkedin.chat"},
     basePackageClasses = FeignAuthenticationInterceptor.class)
 public class ChatServiceApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(ChatServiceApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(ChatServiceApplication.class, args);
+  }
 }

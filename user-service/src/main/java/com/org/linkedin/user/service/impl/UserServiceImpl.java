@@ -68,7 +68,6 @@ public class UserServiceImpl implements UserService {
   @Value("${validation.file.size}")
   private String MAX_FILE_SIZE; // 300KB
 
-  @Value("${user.createPasswordUrl}")
   private String createPasswordUrl;
 
   private static final List<String> ALLOWED_FILE_TYPES =

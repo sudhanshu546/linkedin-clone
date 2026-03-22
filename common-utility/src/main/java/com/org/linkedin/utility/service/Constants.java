@@ -16,16 +16,7 @@ public class Constants {
 
   public static final String LONG = "Long";
 
-  public static final String INT = "Int";
-
-  public static final String BOWSER = "BOWSER";
-
-  public static final String TANK = "TANK";
-
-  public static final String DISPENSER = "DISPENSER";
-
   public static final String INTEGER = "Integer";
-  public static final String IS_ENABLED = "isEnabled";
 
   public static final String IS_DELETED = "isDeleted";
 

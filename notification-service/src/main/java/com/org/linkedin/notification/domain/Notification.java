@@ -2,8 +2,8 @@ package com.org.linkedin.notification.domain;
 
 import com.org.linkedin.domain.AbstractAuditingEntity;
 import jakarta.persistence.*;
-import lombok.*;
 import java.util.UUID;
+import lombok.*;
 
 @Entity
 @Table(name = "notification")
@@ -13,23 +13,23 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class Notification extends AbstractAuditingEntity<UUID> {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private UUID id;
 
-    @Column(name = "recipient_id", nullable = false)
-    private UUID recipientId;
+  @Column(name = "recipient_id", nullable = false)
+  private UUID recipientId;
 
-    @Column(name = "sender_id")
-    private UUID senderId;
+  @Column(name = "sender_id")
+  private UUID senderId;
 
-    @Column(name = "type", nullable = false)
-    private String type;
+  @Column(name = "type", nullable = false)
+  private String type;
 
-    @Column(name = "message", nullable = false)
-    private String message;
+  @Column(name = "message", nullable = false)
+  private String message;
 
-    @Column(name = "is_read")
-    @Builder.Default
-    private boolean isRead = false;
+  @Column(name = "is_read")
+  @Builder.Default
+  private boolean isRead = false;
 }
