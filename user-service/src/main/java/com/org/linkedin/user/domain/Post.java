@@ -2,13 +2,12 @@ package com.org.linkedin.user.domain;
 
 import com.org.linkedin.domain.AbstractAuditingEntity;
 import jakarta.persistence.*;
+import java.util.List;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
 
 @Entity
 @Table(name = "posts")
