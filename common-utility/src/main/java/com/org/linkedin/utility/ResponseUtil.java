@@ -1,6 +1,6 @@
 package com.org.linkedin.utility;
 
-import com.org.linkedin.dto.BaseResponse;
+import com.org.linkedin.dto.ApiResponse;
 import java.util.Optional;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -18,12 +18,12 @@ public interface ResponseUtil {
    *
    * @param <X> type of the response
    * @param maybeResponse response to return if present
-   * @return response containing {@code maybeResponse} in BaseResponse if present or {@link
+   * @return response containing {@code maybeResponse} in ApiResponse if present or {@link
    *     org.springframework.http.HttpStatus#NOT_FOUND}
    */
-  static <X> ResponseEntity<BaseResponse<X>> wrapWithBaseResponseOrNotFound(
+  static <X> ResponseEntity<ApiResponse<X>> wrapWithApiResponseOrNotFound(
       Optional<X> maybeResponse) {
-    return wrapWithBaseResponseOrNotFound(maybeResponse, null);
+    return wrapWithApiResponseOrNotFound(maybeResponse, null);
   }
 
   /**
@@ -35,21 +35,22 @@ public interface ResponseUtil {
    * @param <X> type of the response
    * @param maybeResponse response to return if present
    * @param header headers to be added to the response
-   * @return response containing {@code maybeResponse} in BaseResponse if present
+   * @return response containing {@code maybeResponse} in ApiResponse if present
    */
   @SuppressWarnings("unchecked")
-  static <X> ResponseEntity<BaseResponse<X>> wrapWithBaseResponseOrNotFound(
+  static <X> ResponseEntity<ApiResponse<X>> wrapWithApiResponseOrNotFound(
       Optional<X> maybeResponse, HttpHeaders header) {
-    return (ResponseEntity<BaseResponse<X>>)
+    return (ResponseEntity<ApiResponse<X>>)
         maybeResponse
             .map(
                 response ->
                     ResponseEntity.ok()
                         .headers(header)
                         .body(
-                            BaseResponse.<X>builder()
-                                .result(response)
-                                .status(HttpStatus.OK.value())
+                            ApiResponse.<X>builder()
+                                .data(response)
+                                .status("success")
+                                .message("Success")
                                 .build()))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
   }

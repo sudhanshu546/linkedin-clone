@@ -15,5 +15,5 @@ public class ConnectionDTO {
   private UUID requesterId;
   private UUID receiverId;
   private String status;
-  private Long createdAt;
+  private Long createdDate;
 }

@@ -7,18 +7,19 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
-@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)
+@SpringBootApplication
 @EnableDiscoveryClient
+@EnableWebFluxSecurity
 @OpenAPIDefinition(
     info =
         @Info(
@@ -32,7 +33,7 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
     })
 public class ApiGatewayApplication {
 
-  @Value("${app.cors.allowed-origins:http://localhost:3000}")
+  @Value("${app.cors.allowed-origins:http://localhost:3000 , https://linkedin-liard.vercel.app}")
   private List<String> allowedOrigins;
 
   public static void main(String[] args) {

@@ -1,6 +1,18 @@
 server:
   port: 8081
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411}/api/v2/spans
+
 apiPrefix: /js
 
 eureka:
@@ -8,8 +20,9 @@ eureka:
     serviceUrl:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
   instance:
-    preferIpAddress: true
+    preferIpAddress: false
     hostname: localhost
+    instance-id: ${spring.application.name}:${server.port}
 
 spring:
   application:
@@ -29,8 +42,20 @@ spring:
         jwt:
           jws-algorithm: RS256
           issuer-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/linkedin
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: 1
+      properties:
+        request.timeout.ms: 3000
+        delivery.timeout.ms: 5000
+        max.block.ms: 2000
 
 openapi:
   service:

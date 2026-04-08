@@ -3,25 +3,20 @@ package com.org.linkedin.profile.controller;
 import com.org.linkedin.domain.Education;
 import com.org.linkedin.domain.Experience;
 import com.org.linkedin.domain.Profile;
-import com.org.linkedin.dto.BaseResponse;
+import com.org.linkedin.dto.ApiResponse;
 import com.org.linkedin.dto.ProfileDTO;
 import com.org.linkedin.profile.domain.Post;
 import com.org.linkedin.profile.domain.ProfileView;
-import com.org.linkedin.profile.repo.EducationRepository;
-import com.org.linkedin.profile.repo.ExperienceRepository;
-import com.org.linkedin.profile.repo.PostRepository;
-import com.org.linkedin.profile.repo.ProfileRepo;
-import com.org.linkedin.profile.repo.ProfileViewRepository;
+import com.org.linkedin.profile.repo.*;
 import com.org.linkedin.profile.service.ProfileService;
 import com.org.linkedin.utility.client.UserService;
+import com.org.linkedin.utility.service.AdvanceSearchCriteria;
 import jakarta.validation.Valid;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.FieldError;
@@ -40,108 +35,126 @@ public class ProfileController {
   private final ProfileRepo profileRepo;
   private final ExperienceRepository experienceRepository;
   private final EducationRepository educationRepository;
+  private final DailyProfileViewRepository dailyProfileViewRepository;
 
   /** Get logged-in user's profile */
   @GetMapping("/me")
-  public BaseResponse<ProfileDTO> getMyProfile(Authentication authentication) {
+  public ResponseEntity<ApiResponse<ProfileDTO>> getMyProfile(Authentication authentication) {
     UUID userId = UUID.fromString(authentication.getName());
-    ProfileDTO profile =
-        profileService.getByUserId(
-            userService.getUserByKeyCloakId(userId).getBody().getResult().getId());
-    return BaseResponse.<ProfileDTO>builder().status(HttpStatus.OK.value()).result(profile).build();
+
+    var userResponse = userService.getUserByKeyCloakId(userId);
+    if (userResponse == null
+        || userResponse.getBody() == null
+        || userResponse.getBody().getData() == null) {
+      throw new RuntimeException("User not found in user-service");
+    }
+
+    UUID internalUserId = userResponse.getBody().getData().getId();
+    ProfileDTO profile = profileService.getByUserId(internalUserId);
+    return ResponseEntity.ok(ApiResponse.success("Success", profile));
   }
 
   @GetMapping("/me/views")
-  public BaseResponse<List<ProfileView>> getMyProfileViews(Authentication authentication) {
+  public ResponseEntity<ApiResponse<List<ProfileView>>> getMyProfileViews(
+      Authentication authentication) {
     UUID keycloakId = UUID.fromString(authentication.getName());
-    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getResult().getId();
+    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getData().getId();
     List<ProfileView> views =
         profileViewRepository.findByProfileOwnerIdOrderByViewedAtDesc(internalUserId);
-    return BaseResponse.<List<ProfileView>>builder()
-        .status(HttpStatus.OK.value())
-        .result(views)
-        .build();
+    return ResponseEntity.ok(ApiResponse.success("Success", views));
   }
 
   @GetMapping("/me/views/count")
-  public BaseResponse<Long> getMyProfileViewCount(Authentication authentication) {
+  public ResponseEntity<ApiResponse<Long>> getMyProfileViewCount(Authentication authentication) {
     UUID keycloakId = UUID.fromString(authentication.getName());
-    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getResult().getId();
+    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getData().getId();
     long count = profileViewRepository.countByProfileOwnerId(internalUserId);
-    return BaseResponse.<Long>builder().status(HttpStatus.OK.value()).result(count).build();
+    return ResponseEntity.ok(ApiResponse.success("Success", count));
   }
 
   @GetMapping("/me/views/trends")
-  public BaseResponse<List<Map<String, Object>>> getMyProfileViewTrends(
+  public ResponseEntity<ApiResponse<List<com.org.linkedin.profile.domain.DailyProfileView>>>
+      getMyProfileViewTrends(Authentication authentication) {
+    UUID keycloakId = UUID.fromString(authentication.getName());
+    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getData().getId();
+
+    java.time.LocalDate sevenDaysAgo = java.time.LocalDate.now().minusDays(7);
+    List<com.org.linkedin.profile.domain.DailyProfileView> trends =
+        dailyProfileViewRepository.findByProfileOwnerIdAndViewDateAfterOrderByViewDateAsc(
+            internalUserId, sevenDaysAgo);
+
+    return ResponseEntity.ok(ApiResponse.success("Success", trends));
+  }
+
+  @GetMapping("/me/views/demographics")
+  public ResponseEntity<ApiResponse<Map<String, Map<String, Long>>>> getMyProfileDemographics(
       Authentication authentication) {
     UUID keycloakId = UUID.fromString(authentication.getName());
-    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getResult().getId();
+    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getData().getId();
 
-    LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
-    List<Object[]> results = profileViewRepository.getDailyViewTrends(internalUserId, sevenDaysAgo);
+    List<ProfileView> views =
+        profileViewRepository.findByProfileOwnerIdOrderByViewedAtDesc(internalUserId);
 
-    List<Map<String, Object>> trends =
-        results.stream()
-            .map(
-                row -> {
-                  Map<String, Object> map = new HashMap<>();
-                  map.put("date", row[0].toString());
-                  map.put("count", row[1]);
-                  return map;
-                })
-            .collect(java.util.stream.Collectors.toList());
+    Map<String, Long> titles =
+        views.stream()
+            .filter(v -> v.getViewerDesignation() != null)
+            .collect(
+                java.util.stream.Collectors.groupingBy(
+                    ProfileView::getViewerDesignation, java.util.stream.Collectors.counting()));
 
-    return BaseResponse.<List<Map<String, Object>>>builder()
-        .status(HttpStatus.OK.value())
-        .result(trends)
-        .build();
+    Map<String, Long> companies =
+        views.stream()
+            .filter(v -> v.getViewerCompany() != null)
+            .collect(
+                java.util.stream.Collectors.groupingBy(
+                    ProfileView::getViewerCompany, java.util.stream.Collectors.counting()));
+
+    Map<String, Map<String, Long>> result = new HashMap<>();
+    result.put("titles", titles);
+    result.put("companies", companies);
+
+    return ResponseEntity.ok(ApiResponse.success("Success", result));
   }
 
   /** Get posts authored by the logged-in user */
   @GetMapping("/me/posts")
-  public BaseResponse<org.springframework.data.domain.Page<Post>> getMyPosts(
+  public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<Post>>> getMyPosts(
       Authentication authentication, org.springframework.data.domain.Pageable pageable) {
     UUID keycloakId = UUID.fromString(authentication.getName());
-    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getResult().getId();
+    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getData().getId();
     org.springframework.data.domain.Page<Post> posts =
-        postRepository.findByAuthorIdOrderByCreatedAtDesc(internalUserId, pageable);
-    return BaseResponse.<org.springframework.data.domain.Page<Post>>builder()
-        .status(HttpStatus.OK.value())
-        .result(posts)
-        .build();
+        postRepository.findByAuthorIdOrderByCreatedDateDesc(internalUserId, pageable);
+    return ResponseEntity.ok(ApiResponse.success("Success", posts));
   }
 
   /** Get posts authored by a specific internal User ID */
   @GetMapping("/{userId}/posts")
-  public BaseResponse<org.springframework.data.domain.Page<Post>> getPostsByUser(
+  public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<Post>>> getPostsByUser(
       @PathVariable UUID userId, org.springframework.data.domain.Pageable pageable) {
     org.springframework.data.domain.Page<Post> posts =
-        postRepository.findByAuthorIdOrderByCreatedAtDesc(userId, pageable);
-    return BaseResponse.<org.springframework.data.domain.Page<Post>>builder()
-        .status(HttpStatus.OK.value())
-        .result(posts)
-        .build();
+        postRepository.findByAuthorIdOrderByCreatedDateDesc(userId, pageable);
+    return ResponseEntity.ok(ApiResponse.success("Success", posts));
   }
 
   /** Create or update logged-in user's profile */
   @PostMapping
   @PutMapping
-  public BaseResponse<ProfileDTO> saveOrUpdateProfile(
+  public ResponseEntity<ApiResponse<ProfileDTO>> saveOrUpdateProfile(
       Authentication authentication, @Valid @RequestBody ProfileDTO profileDTO) {
     UUID userId = UUID.fromString(authentication.getName());
     ProfileDTO profile = profileService.saveOrUpdate(userId, profileDTO);
-    return BaseResponse.<ProfileDTO>builder().status(HttpStatus.OK.value()).result(profile).build();
+    return ResponseEntity.ok(ApiResponse.success("Success", profile));
   }
 
   /** Public profile view (LinkedIn style) */
   @GetMapping("/{userId}")
-  public BaseResponse<ProfileDTO> getProfileByUserId(@PathVariable UUID userId) {
+  public ResponseEntity<ApiResponse<ProfileDTO>> getProfileByUserId(@PathVariable UUID userId) {
     ProfileDTO profile = profileService.getByUserId(userId);
-    return BaseResponse.<ProfileDTO>builder().status(HttpStatus.OK.value()).result(profile).build();
+    return ResponseEntity.ok(ApiResponse.success("Success", profile));
   }
 
   @GetMapping("/search")
-  public BaseResponse<List<ProfileDTO>> searchProfiles(
+  public ResponseEntity<ApiResponse<List<ProfileDTO>>> searchProfiles(
       @RequestParam(required = false) String query,
       @RequestParam(required = false) String city,
       @RequestParam(required = false) String state,
@@ -151,44 +164,47 @@ public class ProfileController {
       @RequestParam(required = false) String sortOrder) {
     List<ProfileDTO> profiles =
         profileService.searchProfiles(query, city, state, company, headline, sortBy, sortOrder);
-    return BaseResponse.<List<ProfileDTO>>builder()
-        .status(HttpStatus.OK.value())
-        .result(profiles)
-        .build();
+    return ResponseEntity.ok(ApiResponse.success("Success", profiles));
+  }
+
+  @PostMapping("/advanced-search")
+  public ResponseEntity<ApiResponse<List<ProfileDTO>>> advancedSearch(
+      @RequestBody AdvanceSearchCriteria criteria) {
+    List<ProfileDTO> profiles = profileService.advancedSearch(criteria);
+    return ResponseEntity.ok(ApiResponse.success("Success", profiles));
   }
 
   @PostMapping("/cover-image")
-  public ResponseEntity<BaseResponse<String>> updateCoverImage(
+  public ResponseEntity<ApiResponse<String>> updateCoverImage(
       Authentication authentication,
       @RequestParam("image") org.springframework.web.multipart.MultipartFile image)
       throws java.io.IOException {
     UUID userId = UUID.fromString(authentication.getName());
     String imageUrl = profileService.updateCoverImage(userId, image);
-    return ResponseEntity.ok(
-        BaseResponse.<String>builder().status(HttpStatus.OK.value()).result(imageUrl).build());
+    return ResponseEntity.ok(ApiResponse.success("Success", imageUrl));
   }
 
   @PostMapping("/experience")
-  public BaseResponse<Experience> addExperience(
+  public ResponseEntity<ApiResponse<Experience>> addExperience(
       Authentication authentication, @RequestBody Experience experience) {
     UUID userId = UUID.fromString(authentication.getName());
     Profile profile =
         profileRepo.findByUserId(
-            userService.getUserByKeyCloakId(userId).getBody().getResult().getId());
+            userService.getUserByKeyCloakId(userId).getBody().getData().getId());
     experience.setProfile(profile);
     Experience result = experienceRepository.save(experience);
-    return BaseResponse.<Experience>builder().status(HttpStatus.OK.value()).result(result).build();
+    return ResponseEntity.ok(ApiResponse.success("Success", result));
   }
 
   @PutMapping("/experience/{id}")
-  public BaseResponse<Experience> updateExperience(
+  public ResponseEntity<ApiResponse<Experience>> updateExperience(
       Authentication authentication,
       @PathVariable UUID id,
       @RequestBody Experience experienceDetails) {
     UUID userId = UUID.fromString(authentication.getName());
     Profile profile =
         profileRepo.findByUserId(
-            userService.getUserByKeyCloakId(userId).getBody().getResult().getId());
+            userService.getUserByKeyCloakId(userId).getBody().getData().getId());
     Experience experience =
         experienceRepository
             .findById(id)
@@ -203,15 +219,16 @@ public class ProfileController {
     experience.setCurrentlyWorking(experienceDetails.isCurrentlyWorking());
     experience.setDescription(experienceDetails.getDescription());
     Experience result = experienceRepository.save(experience);
-    return BaseResponse.<Experience>builder().status(HttpStatus.OK.value()).result(result).build();
+    return ResponseEntity.ok(ApiResponse.success("Success", result));
   }
 
   @DeleteMapping("/experience/{id}")
-  public BaseResponse<Void> deleteExperience(Authentication authentication, @PathVariable UUID id) {
+  public ResponseEntity<ApiResponse<Void>> deleteExperience(
+      Authentication authentication, @PathVariable UUID id) {
     UUID userId = UUID.fromString(authentication.getName());
     Profile profile =
         profileRepo.findByUserId(
-            userService.getUserByKeyCloakId(userId).getBody().getResult().getId());
+            userService.getUserByKeyCloakId(userId).getBody().getData().getId());
     Experience experience =
         experienceRepository
             .findById(id)
@@ -220,33 +237,30 @@ public class ProfileController {
       throw new RuntimeException("Unauthorized");
     }
     experienceRepository.delete(experience);
-    return BaseResponse.<Void>builder()
-        .status(HttpStatus.OK.value())
-        .message("Experience deleted")
-        .build();
+    return ResponseEntity.ok(ApiResponse.success("Experience deleted", null));
   }
 
   @PostMapping("/education")
-  public BaseResponse<Education> addEducation(
+  public ResponseEntity<ApiResponse<Education>> addEducation(
       Authentication authentication, @RequestBody Education education) {
     UUID userId = UUID.fromString(authentication.getName());
     Profile profile =
         profileRepo.findByUserId(
-            userService.getUserByKeyCloakId(userId).getBody().getResult().getId());
+            userService.getUserByKeyCloakId(userId).getBody().getData().getId());
     education.setProfile(profile);
     Education result = educationRepository.save(education);
-    return BaseResponse.<Education>builder().status(HttpStatus.OK.value()).result(result).build();
+    return ResponseEntity.ok(ApiResponse.success("Success", result));
   }
 
   @PutMapping("/education/{id}")
-  public BaseResponse<Education> updateEducation(
+  public ResponseEntity<ApiResponse<Education>> updateEducation(
       Authentication authentication,
       @PathVariable UUID id,
       @RequestBody Education educationDetails) {
     UUID userId = UUID.fromString(authentication.getName());
     Profile profile =
         profileRepo.findByUserId(
-            userService.getUserByKeyCloakId(userId).getBody().getResult().getId());
+            userService.getUserByKeyCloakId(userId).getBody().getData().getId());
     Education education =
         educationRepository
             .findById(id)
@@ -260,15 +274,16 @@ public class ProfileController {
     education.setStartDate(educationDetails.getStartDate());
     education.setEndDate(educationDetails.getEndDate());
     Education result = educationRepository.save(education);
-    return BaseResponse.<Education>builder().status(HttpStatus.OK.value()).result(result).build();
+    return ResponseEntity.ok(ApiResponse.success("Success", result));
   }
 
   @DeleteMapping("/education/{id}")
-  public BaseResponse<Void> deleteEducation(Authentication authentication, @PathVariable UUID id) {
+  public ResponseEntity<ApiResponse<Void>> deleteEducation(
+      Authentication authentication, @PathVariable UUID id) {
     UUID userId = UUID.fromString(authentication.getName());
     Profile profile =
         profileRepo.findByUserId(
-            userService.getUserByKeyCloakId(userId).getBody().getResult().getId());
+            userService.getUserByKeyCloakId(userId).getBody().getData().getId());
     Education education =
         educationRepository
             .findById(id)
@@ -277,10 +292,71 @@ public class ProfileController {
       throw new RuntimeException("Unauthorized");
     }
     educationRepository.delete(education);
-    return BaseResponse.<Void>builder()
-        .status(HttpStatus.OK.value())
-        .message("Education deleted")
-        .build();
+    return ResponseEntity.ok(ApiResponse.success("Education deleted", null));
+  }
+
+  // --- SKILLS ---
+  @PostMapping("/skills")
+  public ResponseEntity<ApiResponse<com.org.linkedin.dto.ProfileSkillDTO>> addSkill(
+      Authentication authentication,
+      @RequestParam String name,
+      @RequestParam(required = false) String category) {
+    UUID userId = UUID.fromString(authentication.getName());
+    com.org.linkedin.dto.ProfileSkillDTO result = profileService.addSkill(userId, name, category);
+    return ResponseEntity.ok(ApiResponse.success("Success", result));
+  }
+
+  @DeleteMapping("/skills/{id}")
+  public ResponseEntity<ApiResponse<Void>> removeSkill(
+      Authentication authentication, @PathVariable UUID id) {
+    UUID userId = UUID.fromString(authentication.getName());
+    profileService.removeSkill(userId, id);
+    return ResponseEntity.ok(ApiResponse.success("Skill removed", null));
+  }
+
+  @PostMapping("/skills/{id}/endorse")
+  public ResponseEntity<ApiResponse<Void>> endorseSkill(
+      Authentication authentication, @PathVariable UUID id) {
+    UUID viewerKeycloakId = UUID.fromString(authentication.getName());
+    UUID internalViewerId =
+        userService.getUserByKeyCloakId(viewerKeycloakId).getBody().getData().getId();
+    profileService.endorseSkill(internalViewerId, id);
+    return ResponseEntity.ok(ApiResponse.success("Skill endorsed", null));
+  }
+
+  // --- RECOMMENDATIONS ---
+  @PostMapping("/recommendations/request")
+  public ResponseEntity<ApiResponse<com.org.linkedin.dto.RecommendationDTO>> requestRecommendation(
+      Authentication authentication, @RequestParam UUID authorId, @RequestParam String message) {
+    UUID userId = UUID.fromString(authentication.getName());
+    com.org.linkedin.dto.RecommendationDTO result =
+        profileService.requestRecommendation(userId, authorId, message);
+    return ResponseEntity.ok(ApiResponse.success("Success", result));
+  }
+
+  @PostMapping("/recommendations/{id}/submit")
+  public ResponseEntity<ApiResponse<com.org.linkedin.dto.RecommendationDTO>> submitRecommendation(
+      Authentication authentication, @PathVariable UUID id, @RequestBody String content) {
+    UUID userId = UUID.fromString(authentication.getName());
+    com.org.linkedin.dto.RecommendationDTO result =
+        profileService.submitRecommendation(userId, id, content);
+    return ResponseEntity.ok(ApiResponse.success("Success", result));
+  }
+
+  @PutMapping("/recommendations/{id}/status")
+  public ResponseEntity<ApiResponse<Void>> updateRecommendationStatus(
+      Authentication authentication, @PathVariable UUID id, @RequestParam String status) {
+    UUID userId = UUID.fromString(authentication.getName());
+    profileService.updateRecommendationStatus(userId, id, status);
+    return ResponseEntity.ok(ApiResponse.success("Status updated", null));
+  }
+
+  @GetMapping("/suggestions")
+  public ResponseEntity<ApiResponse<List<ProfileDTO>>> getPeopleYouMayKnow(
+      Authentication authentication) {
+    UUID userId = UUID.fromString(authentication.getName());
+    List<ProfileDTO> result = profileService.getPeopleYouMayKnow(userId);
+    return ResponseEntity.ok(ApiResponse.success("Success", result));
   }
 
   @ResponseStatus(org.springframework.http.HttpStatus.BAD_REQUEST)

@@ -17,5 +17,5 @@ public class NotificationDTO {
   private String type;
   private String message;
   private boolean isRead;
-  private Long createdAt;
+  private Long createdDate;
 }

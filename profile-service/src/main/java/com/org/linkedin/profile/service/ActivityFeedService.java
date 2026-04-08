@@ -1,21 +1,29 @@
 package com.org.linkedin.profile.service;
 
+import static com.org.linkedin.utility.ProjectConstants.DEFAULT_DESIGNATION;
+
 import com.org.linkedin.domain.ActivityFeedItem;
 import com.org.linkedin.dto.event.CommentCreatedEvent;
 import com.org.linkedin.dto.event.ConnectionAcceptedEvent;
 import com.org.linkedin.dto.event.ConnectionRequestedEvent;
 import com.org.linkedin.dto.event.PostCreatedEvent;
-import com.org.linkedin.dto.event.PostLikedEvent;
+import com.org.linkedin.dto.event.PostReactedEvent;
 import com.org.linkedin.profile.repo.ActivityFeedItemRepository;
 import com.org.linkedin.utility.client.UserService;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Service responsible for managing the user's activity feed.
+ * Implements a "Push-on-Write" (Fan-out) strategy to ensure low latency for feed reads.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -26,7 +34,22 @@ public class ActivityFeedService {
   private final com.org.linkedin.profile.repo.ConnectionRepository connectionRepository;
   private final UserService userService;
 
-  private void fanOutFeedItem(
+  /**
+   * Distributes a feed item to all connections of the actor.
+   * This operation is performed asynchronously to avoid blocking the event consumer.
+   *
+   * @param actorId The UUID of the user performing the action.
+   * @param actorName Name of the user for display in the feed.
+   * @param actorDesignation Professional designation of the user.
+   * @param content Content of the post or activity.
+   * @param type Type of activity (e.g., POST_CREATED, POLL_CREATED).
+   * @param imageUrl Main image URL for the post.
+   * @param imageUrls List of all image URLs associated with the post.
+   * @param postId UUID of the original post.
+   * @param metadata Additional context for the feed item.
+   */
+  @Async
+  protected void fanOutFeedItem(
       UUID actorId,
       String actorName,
       String actorDesignation,
@@ -34,21 +57,32 @@ public class ActivityFeedService {
       String type,
       String imageUrl,
       List<String> imageUrls,
-      UUID postId) {
-    log.info("Starting fan-out for actor {}. Type: {}, PostId: {}", actorId, type, postId);
+      UUID postId,
+      java.util.Map<String, String> metadata) {
+    log.info("Starting background fan-out for actor {}. Type: {}", actorId, type);
 
-    // Save for the actor
+    // 1. Save for the actor themselves (so they see it in their own feed)
     saveFeedItem(
-        actorId, actorId, actorName, actorDesignation, content, type, imageUrl, imageUrls, postId);
+        actorId,
+        actorId,
+        actorName,
+        actorDesignation,
+        content,
+        type,
+        imageUrl,
+        imageUrls,
+        postId,
+        1.0,
+        metadata);
 
-    // Save for all connections
+    // 2. Push to all "Accepted" connections
     try {
+      // Connections where actor was the requester
       connectionRepository
           .findByRequesterIdAndStatus(
               actorId, com.org.linkedin.domain.enumeration.ConnectionStatus.ACCEPTED)
           .forEach(
               conn -> {
-                log.info("Fanning out to connection (receiver): {}", conn.getReceiverId());
                 saveFeedItem(
                     conn.getReceiverId(),
                     actorId,
@@ -58,15 +92,17 @@ public class ActivityFeedService {
                     type,
                     imageUrl,
                     imageUrls,
-                    postId);
+                    postId,
+                    0.8, 
+                    metadata);
               });
 
+      // Connections where actor was the receiver
       connectionRepository
           .findByReceiverIdAndStatus(
               actorId, com.org.linkedin.domain.enumeration.ConnectionStatus.ACCEPTED)
           .forEach(
               conn -> {
-                log.info("Fanning out to connection (requester): {}", conn.getRequesterId());
                 saveFeedItem(
                     conn.getRequesterId(),
                     actorId,
@@ -76,13 +112,24 @@ public class ActivityFeedService {
                     type,
                     imageUrl,
                     imageUrls,
-                    postId);
+                    postId,
+                    0.8,
+                    metadata);
               });
+      
+      log.info("Completed background fan-out for post {} by actor {}", postId, actorId);
     } catch (Exception e) {
-      log.error("Error during feed fan-out: {}", e.getMessage());
+      log.error("Error during asynchronous feed fan-out: {}", e.getMessage());
     }
   }
 
+  /**
+   * Internal helper to persist a feed item for a specific recipient.
+   *
+   * @param userId The recipient of the feed item.
+   * @param actorId The person who triggered the feed item.
+   * @param priority Ranking weight for the feed algorithm.
+   */
   private void saveFeedItem(
       UUID userId,
       UUID actorId,
@@ -92,7 +139,9 @@ public class ActivityFeedService {
       String type,
       String imageUrl,
       List<String> imageUrls,
-      UUID postId) {
+      UUID postId,
+      Double priority,
+      java.util.Map<String, String> metadata) {
     try {
       ActivityFeedItem item =
           ActivityFeedItem.builder()
@@ -106,102 +155,168 @@ public class ActivityFeedService {
               .imageUrls(imageUrls)
               .postId(postId)
               .timestamp(LocalDateTime.now())
+              .priority(priority)
+              .metadata(metadata)
               .build();
 
-      item.setCreatedAt(System.currentTimeMillis());
+      // Ensure auditing fields are set manually if JPA auditing is still initializing
+      item.setCreatedDate(System.currentTimeMillis());
       item.setIsDeleted(false);
       item.setIsEnabled(true);
 
-      activityFeedItemRepository.saveAndFlush(item);
-      log.info("SUCCESS: Saved feed item for user {} (actor: {})", userId, actorId);
+      activityFeedItemRepository.save(item);
     } catch (Exception e) {
-      log.error("FAILURE: Could not save feed item: {}", e.getMessage());
+      log.error("CRITICAL: Could not persist feed item for user {}: {}", userId, e.getMessage());
     }
   }
 
+  /**
+   * Entry point for PostCreatedEvent. Triggers the fan-out process.
+   * @param event The event consumed from Kafka.
+   */
   public void createFeedItem(PostCreatedEvent event) {
-    log.info("Processing PostCreatedEvent for post: {}", event.getPostId());
-    // For posts, the 'content' string in ActivityFeedItem will just be the post text
+    log.debug("Processing PostCreatedEvent for post: {}", event.getPostId());
+    java.util.Map<String, String> metadata = new java.util.HashMap<>();
+    if (event.isPoll()) {
+      metadata.put("isPoll", "true");
+      metadata.put("pollQuestion", event.getPollQuestion());
+      metadata.put("pollOptions", String.join(",", event.getPollOptions()));
+    }
+
     fanOutFeedItem(
         UUID.fromString(event.getUserId()),
         event.getUserName(),
         event.getUserDesignation(),
         event.getContent(),
-        "POST_CREATED",
+        event.isPoll() ? "POLL_CREATED" : "POST_CREATED",
         event.getImageUrl(),
         event.getImageUrls(),
-        UUID.fromString(event.getPostId()));
+        UUID.fromString(event.getPostId()),
+        metadata);
   }
 
-  public void createFeedItem(PostLikedEvent event) {
-    // We don't want to create a new feed item for likes
-    // Likes are handled via post stats in the existing post card
-    log.info("PostLikedEvent received, not creating feed item.");
-  }
-
-  public void createFeedItem(CommentCreatedEvent event) {
-    // We don't want to create a new feed item for comments
-    // Comments are handled via comment section in the existing post card
-    log.info("CommentCreatedEvent received, not creating feed item.");
-  }
-
+  /**
+   * Entry point for ConnectionRequestedEvent.
+   * Directly saves a feed item for the receiver.
+   */
   public void createFeedItem(ConnectionRequestedEvent event) {
-    var actor = userService.getUserByInternalId(event.getSenderId()).getBody().getResult();
+    var actorResponse = userService.getUserById(event.getSenderId());
+    if (actorResponse == null || actorResponse.getBody() == null) return;
+    
+    var actor = actorResponse.getBody().getData();
     String actorName =
         actor.getFirstName() + (actor.getLastName() != null ? " " + actor.getLastName() : "");
+        
     saveFeedItem(
         event.getReceiverId(),
         event.getSenderId(),
         actorName,
-        "LinkedIn Member",
+        DEFAULT_DESIGNATION,
         "sent you a connection request",
         "CONNECTION_REQUESTED",
         null,
         null,
+        null,
+        0.5,
         null);
   }
 
+  /**
+   * Entry point for ConnectionAcceptedEvent.
+   * Updates feeds for both participants.
+   */
   public void createFeedItem(ConnectionAcceptedEvent event) {
-    var receiver = userService.getUserByInternalId(event.getReceiverId()).getBody().getResult();
-    String receiverName =
-        receiver.getFirstName()
-            + (receiver.getLastName() != null ? " " + receiver.getLastName() : "");
+    var receiverBody = userService.getUserById(event.getReceiverId()).getBody();
+    var requesterBody = userService.getUserById(event.getRequesterId()).getBody();
+    
+    if (receiverBody == null || requesterBody == null) return;
 
-    var requester = userService.getUserByInternalId(event.getRequesterId()).getBody().getResult();
-    String requesterName =
-        requester.getFirstName()
-            + (requester.getLastName() != null ? " " + requester.getLastName() : "");
+    var receiver = receiverBody.getData();
+    String receiverName = receiver.getFirstName() + " " + (receiver.getLastName() != null ? receiver.getLastName() : "");
+
+    var requester = requesterBody.getData();
+    String requesterName = requester.getFirstName() + " " + (requester.getLastName() != null ? requester.getLastName() : "");
 
     saveFeedItem(
         event.getRequesterId(),
         event.getReceiverId(),
         receiverName,
-        "LinkedIn Member",
+        DEFAULT_DESIGNATION,
         "accepted your connection request",
         "CONNECTION_ACCEPTED",
         null,
         null,
+        null,
+        0.9,
         null);
+        
     saveFeedItem(
         event.getReceiverId(),
         event.getRequesterId(),
         requesterName,
-        "LinkedIn Member",
+        DEFAULT_DESIGNATION,
         "is now connected with you",
         "CONNECTION_ACCEPTED",
         null,
         null,
+        null,
+        0.9,
         null);
   }
 
+  /**
+   * Entry point for PostReactedEvent.
+   * Notifies the post author about the reaction.
+   */
+  public void createFeedItem(PostReactedEvent event) {
+    if (event.getUserId().equals(event.getPostAuthorId())) return;
+
+    saveFeedItem(
+        UUID.fromString(event.getPostAuthorId()),
+        UUID.fromString(event.getUserId()),
+        event.getUserName(),
+        event.getUserDesignation(),
+        "reacted to your post",
+        "POST_REACTED",
+        null,
+        null,
+        UUID.fromString(event.getPostId()),
+        0.7,
+        java.util.Map.of("reactionType", event.getReactionType().toString()));
+  }
+
+  /**
+   * Entry point for CommentCreatedEvent.
+   * Fans out the comment activity to connections of the commenter.
+   */
+  public void createFeedItem(CommentCreatedEvent event) {
+    fanOutFeedItem(
+        UUID.fromString(event.getUserId()),
+        event.getUserName(),
+        event.getUserDesignation(),
+        "commented on a post: " + event.getContent(),
+        "COMMENT_CREATED",
+        null,
+        null,
+        UUID.fromString(event.getPostId()),
+        java.util.Map.of("commentId", event.getCommentId()));
+  }
+
+  /**
+   * Retrieves the feed for a specific user ordered by timestamp.
+   */
   @Transactional(readOnly = true)
   public org.springframework.data.domain.Page<ActivityFeedItem> getFeedForUser(
       UUID userId, org.springframework.data.domain.Pageable pageable) {
     return activityFeedItemRepository.findByUserIdOrderByTimestampDesc(userId, pageable);
   }
 
+  /**
+   * Retrieves the feed for a specific user using an advanced priority-based ranking.
+   */
   public org.springframework.data.domain.Page<ActivityFeedItem> getFeedForUserPaginated(
       UUID userId, org.springframework.data.domain.Pageable pageable) {
-    return activityFeedItemRepository.findByUserIdOrderByTimestampDesc(userId, pageable);
+    return activityFeedItemRepository.findByUserIdOrderByPriorityDescTimestampDesc(
+        userId, pageable);
   }
 }

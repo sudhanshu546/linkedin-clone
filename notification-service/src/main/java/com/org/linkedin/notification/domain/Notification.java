@@ -4,14 +4,16 @@ import com.org.linkedin.domain.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import java.util.UUID;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
-@Table(name = "notification")
-@Getter
-@Setter
+@Table(
+    name = "notification",
+    indexes = {@Index(name = "idx_notification_recipient_read", columnList = "recipient_id, is_read, created_at DESC")})
+@Data
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Notification extends AbstractAuditingEntity<UUID> {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)

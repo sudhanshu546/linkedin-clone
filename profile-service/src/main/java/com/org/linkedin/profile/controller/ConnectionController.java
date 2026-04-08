@@ -1,6 +1,6 @@
 package com.org.linkedin.profile.controller;
 
-import com.org.linkedin.dto.BaseResponse;
+import com.org.linkedin.dto.ApiResponse;
 import com.org.linkedin.dto.connection.ConnectionDTO;
 import com.org.linkedin.dto.connection.ConnectionRequestDTO;
 import com.org.linkedin.dto.connection.UserConnectionStatusDTO;
@@ -8,7 +8,7 @@ import com.org.linkedin.profile.service.ConnectionService;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,69 +20,55 @@ public class ConnectionController {
   private final ConnectionService connectionService;
 
   @PostMapping("/request")
-  public BaseResponse<Void> sendRequest(
+  public ResponseEntity<ApiResponse<Void>> sendRequest(
       Authentication authentication, @RequestBody ConnectionRequestDTO dto) {
     connectionService.sendRequest(authentication, dto.getReceiverId());
-    return BaseResponse.<Void>builder()
-        .status(HttpStatus.OK.value())
-        .message("Connection request sent")
-        .build();
+    return ResponseEntity.ok(ApiResponse.success("Connection request sent", null));
   }
 
   @PostMapping("/{id}/respond")
-  public BaseResponse<Void> respond(
+  public ResponseEntity<ApiResponse<Void>> respond(
       Authentication authentication,
       @PathVariable UUID id,
       @RequestParam("accept") boolean accept) {
     connectionService.respondToRequest(authentication, id, accept);
-    return BaseResponse.<Void>builder()
-        .status(HttpStatus.OK.value())
-        .message(accept ? "Connection accepted" : "Connection rejected")
-        .build();
+    return ResponseEntity.ok(
+        ApiResponse.success(accept ? "Connection accepted" : "Connection rejected", null));
   }
 
   @DeleteMapping("/{id}/cancel")
-  public BaseResponse<Void> cancelRequest(Authentication authentication, @PathVariable UUID id) {
+  public ResponseEntity<ApiResponse<Void>> cancelRequest(
+      Authentication authentication, @PathVariable UUID id) {
     connectionService.cancelRequest(authentication, id);
-    return BaseResponse.<Void>builder()
-        .status(HttpStatus.OK.value())
-        .message("Connection request cancelled")
-        .build();
+    return ResponseEntity.ok(ApiResponse.success("Connection request cancelled", null));
   }
 
   @GetMapping
-  public BaseResponse<List<ConnectionDTO>> myConnections(Authentication authentication) {
+  public ResponseEntity<ApiResponse<List<ConnectionDTO>>> myConnections(
+      Authentication authentication) {
     List<ConnectionDTO> result = connectionService.getMyConnections(authentication);
-    return BaseResponse.<List<ConnectionDTO>>builder()
-        .status(HttpStatus.OK.value())
-        .result(result)
-        .build();
+    return ResponseEntity.ok(ApiResponse.success("Success", result));
   }
 
   @GetMapping("/pending")
-  public BaseResponse<List<ConnectionDTO>> getPending(Authentication authentication) {
+  public ResponseEntity<ApiResponse<List<ConnectionDTO>>> getPending(
+      Authentication authentication) {
     List<ConnectionDTO> result = connectionService.getPendingRequests(authentication);
-    return BaseResponse.<List<ConnectionDTO>>builder()
-        .status(HttpStatus.OK.value())
-        .result(result)
-        .build();
+    return ResponseEntity.ok(ApiResponse.success("Success", result));
   }
 
   @GetMapping("/status/{otherUserId}")
-  public BaseResponse<UserConnectionStatusDTO> getStatus(
+  public ResponseEntity<ApiResponse<UserConnectionStatusDTO>> getStatus(
       Authentication authentication, @PathVariable UUID otherUserId) {
     UserConnectionStatusDTO result =
         connectionService.getConnectionStatus(authentication, otherUserId);
-    return BaseResponse.<UserConnectionStatusDTO>builder()
-        .status(HttpStatus.OK.value())
-        .result(result)
-        .build();
+    return ResponseEntity.ok(ApiResponse.success("Success", result));
   }
 
   @GetMapping("/recommendations")
-  public BaseResponse<List<UUID>> getRecommendations(Authentication authentication) {
+  public ResponseEntity<ApiResponse<List<UUID>>> getRecommendations(Authentication authentication) {
     UUID userId = UUID.fromString(authentication.getName());
     List<UUID> result = connectionService.findMutualConnections(userId);
-    return BaseResponse.<List<UUID>>builder().status(HttpStatus.OK.value()).result(result).build();
+    return ResponseEntity.ok(ApiResponse.success("Success", result));
   }
 }

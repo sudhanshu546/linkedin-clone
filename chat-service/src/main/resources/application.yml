@@ -1,15 +1,19 @@
 server:
   port: 8086
 
-apiPrefix: /cs
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411}/api/v2/spans
 
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
-  instance:
-    preferIpAddress: true
-    hostname: localhost
+apiPrefix: /cs
 
 spring:
   application:
@@ -29,6 +33,20 @@ spring:
         jwt:
           jws-algorithm: RS256
           issuer-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/linkedin
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+  instance:
+    preferIpAddress: false
+    hostname: localhost
+    instance-id: ${spring.application.name}:${server.port}
 
 openapi:
   service:

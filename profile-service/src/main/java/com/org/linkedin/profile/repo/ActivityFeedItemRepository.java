@@ -10,4 +10,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ActivityFeedItemRepository extends JpaRepository<ActivityFeedItem, UUID> {
   Page<ActivityFeedItem> findByUserIdOrderByTimestampDesc(UUID userId, Pageable pageable);
+
+  Page<ActivityFeedItem> findByUserIdOrderByPriorityDescTimestampDesc(
+      UUID userId, Pageable pageable);
 }

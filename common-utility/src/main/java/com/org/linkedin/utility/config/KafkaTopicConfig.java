@@ -27,6 +27,9 @@ public class KafkaTopicConfig {
   @Value("${kafka.topics.connection-accepted:connection-accepted}")
   private String connectionAcceptedTopic;
 
+  @Value("${kafka.topics.post-hashtags:post-hashtags}")
+  private String postHashtagsTopic;
+
   @Bean
   public NewTopic postCreatedTopic() {
     return TopicBuilder.name(postCreatedTopic).partitions(3).replicas(1).build();
@@ -55,5 +58,10 @@ public class KafkaTopicConfig {
   @Bean
   public NewTopic connectionAcceptedTopic() {
     return TopicBuilder.name(connectionAcceptedTopic).partitions(3).replicas(1).build();
+  }
+
+  @Bean
+  public NewTopic postHashtagsTopic() {
+    return TopicBuilder.name(postHashtagsTopic).partitions(3).replicas(1).build();
   }
 }

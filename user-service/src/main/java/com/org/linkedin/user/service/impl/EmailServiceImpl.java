@@ -31,11 +31,11 @@ public class EmailServiceImpl implements EmailService {
   @Override
   public Response sendEmailDetailWithoutAttachment(
       String from, String to, String templateId, Map<String, String> dynamicData) {
-    log.trace("Enter in sendEmailDetailWithoutAttachment method.");
-    log.trace("Dynamic Data :: [{}]", dynamicData);
-    log.trace("Mail form :: [{}]", from);
-    log.trace("Mail to :: [{}]", to);
-    log.trace("templateId is :: [{}]", templateId);
+    log.debug("Enter in sendEmailDetailWithoutAttachment method.");
+    log.debug("Dynamic Data :: [{}]", dynamicData);
+    log.debug("Mail form :: [{}]", from);
+    log.debug("Mail to :: [{}]", to);
+    log.debug("templateId is :: [{}]", templateId);
 
     Mail mail = new Mail();
     mail.setFrom(new Email(from));
@@ -49,25 +49,25 @@ public class EmailServiceImpl implements EmailService {
     }
 
     mail.addPersonalization(personalization);
-    log.trace("Exit in sendEmailDetailWithoutAttachment method.");
+    log.debug("Exit in sendEmailDetailWithoutAttachment method.");
     return (this.sendEmail(mail));
   }
 
   private Response sendEmail(Mail mail) {
     try {
-      log.trace("Enter in sending mail :: mail [{}]", mail.toString());
+      log.debug("Enter in sending mail :: mail [{}]", mail.toString());
       Request request = new Request();
       request.setMethod(Method.POST);
       request.setEndpoint("mail/send");
       request.setBody(mail.build());
 
       Response response = sendGrid.api(request);
-      log.trace("Response in sending mail :: response [{}]", response.toString());
+      log.debug("Response in sending mail :: response [{}]", response.toString());
 
       if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-        log.trace("Email Sent Successfully");
+        log.debug("Email Sent Successfully");
       } else {
-        log.trace("Error in sending message :: response [{}]", response.getBody());
+        log.debug("Error in sending message :: response [{}]", response.getBody());
       }
       String status =
           (response.getStatusCode() >= 200 && response.getStatusCode() < 300)
@@ -77,7 +77,7 @@ public class EmailServiceImpl implements EmailService {
       if (!status.equals("success")) {
         throw new CommonExceptionHandler(response.getBody(), HttpStatus.BAD_REQUEST.value());
       }
-      log.trace("Exit in sendEmail method :: response [{}]", response);
+      log.debug("Exit in sendEmail method :: response [{}]", response);
       return response;
     } catch (IOException e) {
       log.error("Error in the sendEmail method .", e);
@@ -92,24 +92,24 @@ public class EmailServiceImpl implements EmailService {
 
     @JsonProperty("dynamic_template_data")
     public Map<String, String> getDynamicTemplateDataDetail() {
-      log.trace("Enter in getDynamicTemplateDataDetail method.");
+      log.debug("Enter in getDynamicTemplateDataDetail method.");
       if (dynamic_template_data == null) {
-        log.trace("dynamic_template_data is null in getDynamicTemplateDataDetail method");
+        log.debug("dynamic_template_data is null in getDynamicTemplateDataDetail method");
         return Collections.<String, String>emptyMap();
       }
-      log.trace("Exit in getDynamicTemplateDataDetail method.");
+      log.debug("Exit in getDynamicTemplateDataDetail method.");
       return dynamic_template_data;
     }
 
     public void addDynamicTemplateData(String key, String value) {
-      log.trace("Enter in addDynamicTemplateData method :: key [{}] :: value [{}]", key, value);
+      log.debug("Enter in addDynamicTemplateData method :: key [{}] :: value [{}]", key, value);
       if (dynamic_template_data == null) {
-        log.trace("dynamic_template_data is null in addDynamicTemplateData method");
+        log.debug("dynamic_template_data is null in addDynamicTemplateData method");
         dynamic_template_data = new HashMap<>();
         dynamic_template_data.put(key, value);
       } else {
         dynamic_template_data.put(key, value);
-        log.trace("Exit in addDynamicTemplateData method.");
+        log.debug("Exit in addDynamicTemplateData method.");
       }
     }
   }

@@ -4,14 +4,19 @@ import com.org.linkedin.domain.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import java.util.UUID;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
-@Table(name = "jobs")
-@Getter
-@Setter
+@Table(
+    name = "jobs",
+    indexes = {
+        @Index(name = "idx_jobs_posted_by", columnList = "posted_by"),
+        @Index(name = "idx_jobs_location_type", columnList = "location, job_type")
+    })
+@Data
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Job extends AbstractAuditingEntity<UUID> {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)

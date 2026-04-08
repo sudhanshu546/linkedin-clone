@@ -24,25 +24,26 @@ public class NotificationServiceImpl implements NotificationService {
   @Override
   public List<NotificationDTO> getMyNotifications(Authentication authentication) {
     UUID keycloakId = UUID.fromString(authentication.getName());
-    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getResult().getId();
+    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getData().getId();
     List<Notification> notifications =
-        notificationRepository.findByRecipientIdOrderByCreatedAtDesc(internalUserId);
+        notificationRepository.findByRecipientIdOrderByCreatedDateDesc(internalUserId);
     return notificationMapper.toDto(notifications);
   }
 
   @Override
   public List<NotificationDTO> getMyUnreadNotifications(Authentication authentication) {
     UUID keycloakId = UUID.fromString(authentication.getName());
-    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getResult().getId();
+    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getData().getId();
     List<Notification> notifications =
-        notificationRepository.findByRecipientIdAndIsReadFalseOrderByCreatedAtDesc(internalUserId);
+        notificationRepository.findByRecipientIdAndIsReadFalseOrderByCreatedDateDesc(
+            internalUserId);
     return notificationMapper.toDto(notifications);
   }
 
   @Override
   public long getMyUnreadCount(Authentication authentication) {
     UUID keycloakId = UUID.fromString(authentication.getName());
-    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getResult().getId();
+    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getData().getId();
     return notificationRepository.countByRecipientIdAndIsReadFalse(internalUserId);
   }
 
@@ -61,9 +62,9 @@ public class NotificationServiceImpl implements NotificationService {
   @Transactional
   public void markAllAsRead(Authentication authentication) {
     UUID keycloakId = UUID.fromString(authentication.getName());
-    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getResult().getId();
+    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getData().getId();
     notificationRepository
-        .findByRecipientIdAndIsReadFalseOrderByCreatedAtDesc(internalUserId)
+        .findByRecipientIdAndIsReadFalseOrderByCreatedDateDesc(internalUserId)
         .forEach(
             n -> {
               n.setRead(true);
@@ -80,7 +81,7 @@ public class NotificationServiceImpl implements NotificationService {
   @Transactional
   public void deleteAllNotifications(Authentication authentication) {
     UUID keycloakId = UUID.fromString(authentication.getName());
-    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getResult().getId();
+    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getData().getId();
     notificationRepository.deleteByRecipientId(internalUserId);
   }
 }

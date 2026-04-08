@@ -1,7 +1,6 @@
 package com.org.linkedin.apigateway.controller;
 
-import java.util.HashMap;
-import java.util.Map;
+import com.org.linkedin.dto.ApiResponse;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,50 +12,50 @@ public class FallbackController {
 
   @RequestMapping(
       value = "/user",
-      method = {RequestMethod.GET, RequestMethod.POST})
-  public Mono<Map<String, String>> userFallback() {
+      method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
+  public Mono<ApiResponse<Void>> userFallback() {
     return Mono.just(
-        createFallbackResponse("User Service is temporarily unavailable. Please try again later."));
+        ApiResponse.error("User Service is temporarily unavailable. Please try again later."));
   }
 
   @RequestMapping(
       value = "/profile",
-      method = {RequestMethod.GET, RequestMethod.POST})
-  public Mono<Map<String, String>> profileFallback() {
+      method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
+  public Mono<ApiResponse<Void>> profileFallback() {
     return Mono.just(
-        createFallbackResponse(
-            "Profile Service is temporarily unavailable. Please try again later."));
+        ApiResponse.error("Profile Service is temporarily unavailable. Please try again later."));
   }
 
   @RequestMapping(
       value = "/notification",
-      method = {RequestMethod.GET, RequestMethod.POST})
-  public Mono<Map<String, String>> notificationFallback() {
+      method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
+  public Mono<ApiResponse<Void>> notificationFallback() {
     return Mono.just(
-        createFallbackResponse(
+        ApiResponse.error(
             "Notification Service is temporarily unavailable. Please try again later."));
   }
 
   @RequestMapping(
       value = "/job",
-      method = {RequestMethod.GET, RequestMethod.POST})
-  public Mono<Map<String, String>> jobFallback() {
+      method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
+  public Mono<ApiResponse<Void>> jobFallback() {
     return Mono.just(
-        createFallbackResponse("Job Service is temporarily unavailable. Please try again later."));
+        ApiResponse.error("Job Service is temporarily unavailable. Please try again later."));
   }
 
   @RequestMapping(
       value = "/chat",
-      method = {RequestMethod.GET, RequestMethod.POST})
-  public Mono<Map<String, String>> chatFallback() {
+      method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
+  public Mono<ApiResponse<Void>> chatFallback() {
     return Mono.just(
-        createFallbackResponse("Chat Service is temporarily unavailable. Please try again later."));
+        ApiResponse.error("Chat Service is temporarily unavailable. Please try again later."));
   }
 
-  private Map<String, String> createFallbackResponse(String message) {
-    Map<String, String> response = new HashMap<>();
-    response.put("status", "error");
-    response.put("message", message);
-    return response;
+  @RequestMapping(
+      value = "/search",
+      method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
+  public Mono<ApiResponse<Void>> searchFallback() {
+    return Mono.just(
+        ApiResponse.error("Search Service is temporarily unavailable. Please try again later."));
   }
 }

@@ -4,14 +4,14 @@ import com.org.linkedin.domain.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import java.util.UUID;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "messages")
-@Getter
-@Setter
+@Data
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class ChatMessage extends AbstractAuditingEntity<UUID> {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)

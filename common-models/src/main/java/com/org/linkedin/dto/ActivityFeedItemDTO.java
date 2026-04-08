@@ -27,4 +27,7 @@ public class ActivityFeedItemDTO {
   private String actorDesignation;
   private String actorProfileId; // Keycloak ID for linking
   private boolean isLikedByCurrentUser;
+  private String userReaction;
+  private long reactionCount;
+  private long commentCount;
 }

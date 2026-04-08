@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> {
-  List<ChatMessage> findBySenderIdAndRecipientIdOrSenderIdAndRecipientIdOrderByCreatedAtAsc(
+  List<ChatMessage> findBySenderIdAndRecipientIdOrSenderIdAndRecipientIdOrderByCreatedDateAsc(
       UUID senderId, UUID recipientId, UUID senderId2, UUID recipientId2);
 
   @Modifying

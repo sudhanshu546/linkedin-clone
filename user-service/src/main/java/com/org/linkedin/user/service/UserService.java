@@ -2,6 +2,7 @@ package com.org.linkedin.user.service;
 
 import com.org.linkedin.dto.user.ChangePassword;
 import com.org.linkedin.dto.user.TUserDTO;
+import com.org.linkedin.utility.service.AdvanceSearchCriteria;
 import jakarta.validation.Valid;
 import java.io.IOException;
 import java.util.List;
@@ -15,6 +16,8 @@ import org.springframework.web.multipart.MultipartFile;
 public interface UserService {
 
   List<TUserDTO> searchUsers(String query);
+
+  Page<TUserDTO> advancedSearch(AdvanceSearchCriteria criteria);
 
   void save(@Valid TUserDTO employeeDTO, String clientName);
 
@@ -41,4 +44,16 @@ public interface UserService {
   TUserDTO findUserByKeyCloakId(UUID keyCloakId);
 
   TUserDTO getUserDetailsByAuthentication(Authentication authentication);
+
+  com.org.linkedin.dto.user.PrivacySettingsDTO getPrivacySettings(UUID userId);
+
+  void updatePrivacySettings(UUID userId, com.org.linkedin.dto.user.PrivacySettingsDTO dto);
+
+  void blockUser(UUID blockerId, UUID blockedId);
+
+  void unblockUser(UUID blockerId, UUID blockedId);
+
+  boolean isBlocked(UUID blockerId, UUID blockedId);
+
+  List<TUserDTO> getBlockedUsers(UUID blockerId);
 }

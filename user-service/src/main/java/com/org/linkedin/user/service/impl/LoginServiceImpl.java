@@ -51,9 +51,9 @@ public class LoginServiceImpl implements LoginService {
   @Override
   public AccessTokenResponse login(LoginRequest loginRequest, String chain) {
     try {
-      log.trace("Enter in login method :: loginRequest [{}] :: chain [{}]", loginRequest, chain);
+      log.debug("Enter in login method :: loginRequest [{}] :: chain [{}]", loginRequest, chain);
       String username = loginRequest.userName().toLowerCase();
-      log.trace("username is :: [{}]", username);
+      log.debug("username is :: [{}]", username);
       Optional<TUser> userOptional;
       if (keycloakClients.clientName().equalsIgnoreCase(chain)) {
         userOptional = userRepository.findByEmail(username);
@@ -66,7 +66,7 @@ public class LoginServiceImpl implements LoginService {
               () ->
                   new CommonExceptionHandler(
                       ErrorKeys.USER_NOT_FOUND, HttpStatus.BAD_REQUEST.value()));
-      log.trace("User details is :: [{}]", user);
+      log.debug("User details is :: [{}]", user);
       if (!user.getIsEnabled()) {
         throw new CommonExceptionHandler(ErrorKeys.USER_INACTIVE, HttpStatus.BAD_REQUEST.value());
       }
@@ -75,16 +75,16 @@ public class LoginServiceImpl implements LoginService {
               .keycloakDemoClientUser(loginRequest)
               .tokenManager()
               .getAccessToken();
-      log.trace("Exit in login method :: AccessTokenResponse [{}]", res);
+      log.debug("Exit in login method :: AccessTokenResponse [{}]", res);
       //      return tbsHttpUtil.getPermissionToken(res.getToken(), chain);
       return res;
     } catch (NotAuthorizedException e) {
-      log.trace("Invalid User Credentials in Login Request :: [{}] ", loginRequest);
+      log.debug("Invalid User Credentials in Login Request :: [{}] ", loginRequest);
       throw new CommonExceptionHandler(
           ErrorKeys.INVALID_USER_CREDENTIALS, HttpStatus.BAD_REQUEST.value());
     } catch (WebClientResponseException.Forbidden ex) {
       log.error("Error in the login method ", ex);
-      log.trace("Access Denied in Login Request :: [{}] ", loginRequest);
+      log.debug("Access Denied in Login Request :: [{}] ", loginRequest);
       throw new CommonExceptionHandler(ErrorKeys.ACCESS_DENIED, HttpStatus.BAD_REQUEST.value());
     }
   }
@@ -104,17 +104,17 @@ public class LoginServiceImpl implements LoginService {
    */
   @Override
   public AccessTokenResponse getRefreshToken(String refreshToken, String chain) {
-    log.trace("Enter in get refresh token :: refreshToken [{}] :: chain [{}]", refreshToken, chain);
+    log.debug("Enter in get refresh token :: refreshToken [{}] :: chain [{}]", refreshToken, chain);
     try {
       String clientSecret =
           chain.equalsIgnoreCase(keycloakClients.clientName())
               ? keycloakDemoClientUserProperties.getClientSecret()
               : null;
-      log.trace("client secret is :: [{}]", clientSecret);
+      log.debug("client secret is :: [{}]", clientSecret);
       AccessTokenResponse res =
           tbsHttpUtil.getTokenByRefreshToken(refreshToken, chain, clientSecret);
-      log.trace("Access token response is :: [{}]", res);
-      log.trace("Exit in get refresh token method .");
+      log.debug("Access token response is :: [{}]", res);
+      log.debug("Exit in get refresh token method .");
       // Only get the permission token if the initial token retrieval succeeds
       return tbsHttpUtil.getPermissionToken(res.getToken(), chain);
     } catch (WebClientResponseException e) {

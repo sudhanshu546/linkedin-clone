@@ -1,5 +1,6 @@
 package com.org.linkedin.user.controller;
 
+import com.org.linkedin.dto.ApiResponse;
 import com.org.linkedin.user.service.EmailService;
 import com.sendgrid.Response;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,16 +30,16 @@ public class MailController {
    */
   @Operation(summary = "This Api is use to send Email")
   @PostMapping("/sendEmail")
-  public ResponseEntity<String> sendEmailWithoutAttachment(
+  public ResponseEntity<ApiResponse<String>> sendEmailWithoutAttachment(
       @RequestBody Map<String, Object> emailRequest) {
-    log.trace("Enter in sendEmailWithoutAttachment method :: emailRequest [{}]", emailRequest);
+    log.debug("Enter in sendEmailWithoutAttachment method :: emailRequest [{}]", emailRequest);
     Response response =
         mailService.sendEmailDetailWithoutAttachment(
             (String) emailRequest.get("from"),
             (String) emailRequest.get("to"),
             (String) emailRequest.get("templateId"),
             (Map<String, String>) emailRequest.get("dynamicData"));
-    log.trace("Exit in sendEmailWithoutAttachment method :: response [{}]", response.getBody());
-    return ResponseEntity.ok(response.getBody());
+    log.debug("Exit in sendEmailWithoutAttachment method :: response [{}]", response.getBody());
+    return ResponseEntity.ok(ApiResponse.success("Email sent successfully", response.getBody()));
   }
 }

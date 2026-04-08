@@ -2,7 +2,7 @@ package com.org.linkedin.profile.controller;
 
 import com.org.linkedin.domain.ActivityFeedItem;
 import com.org.linkedin.dto.ActivityFeedItemDTO;
-import com.org.linkedin.dto.BasePageResponse;
+import com.org.linkedin.dto.ApiResponse;
 import com.org.linkedin.profile.repo.ProfileRepo;
 import com.org.linkedin.profile.service.ActivityFeedService;
 import com.org.linkedin.utility.client.UserService;
@@ -30,19 +30,38 @@ public class ActivityFeedController {
   private final ProfileRepo profileRepo;
 
   @GetMapping
-  public ResponseEntity<BasePageResponse<List<ActivityFeedItemDTO>>> getMyFeed(
+  public ResponseEntity<ApiResponse<List<ActivityFeedItemDTO>>> getMyFeed(
       Authentication authentication,
       @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
       @org.springframework.web.bind.annotation.RequestParam(defaultValue = "10") int size) {
     UUID keycloakId = UUID.fromString(authentication.getName());
     try {
       var userRes = userService.getUserByKeyCloakId(keycloakId);
-      if (userRes != null && userRes.getBody() != null && userRes.getBody().getResult() != null) {
-        UUID internalUserId = userRes.getBody().getResult().getId();
+      if (userRes != null && userRes.getBody() != null && userRes.getBody().getData() != null) {
+        UUID internalUserId = userRes.getBody().getData().getId();
         org.springframework.data.domain.Pageable pageable =
             org.springframework.data.domain.PageRequest.of(page, size);
         Page<ActivityFeedItem> feedPage =
             activityFeedService.getFeedForUserPaginated(internalUserId, pageable);
+
+        List<UUID> postIds = feedPage.getContent().stream()
+            .map(ActivityFeedItem::getPostId)
+            .filter(java.util.Objects::nonNull)
+            .collect(Collectors.toList());
+
+        com.org.linkedin.dto.PostEnrichmentDTO enrichment = null;
+        if (!postIds.isEmpty()) {
+          try {
+            var enrichmentRes = userService.getPostEnrichment(postIds);
+            if (enrichmentRes != null && enrichmentRes.getBody() != null) {
+              enrichment = enrichmentRes.getBody().getData();
+            }
+          } catch (Exception e) {
+            log.warn("Failed to fetch feed enrichment: {}", e.getMessage());
+          }
+        }
+
+        final com.org.linkedin.dto.PostEnrichmentDTO finalEnrichment = enrichment;
 
         List<ActivityFeedItemDTO> dtoList =
             feedPage.getContent().stream()
@@ -65,17 +84,13 @@ public class ActivityFeedController {
 
                       dto.setActorProfileId(item.getActorId().toString());
 
-                      if (item.getPostId() != null) {
-                        try {
-                          var likedRes = userService.isLiked(item.getPostId());
-                          if (likedRes != null && likedRes.getBody() != null) {
-                            dto.setLikedByCurrentUser(likedRes.getBody());
-                          }
-                        } catch (Exception e) {
-                          log.warn(
-                              "Could not check like status for post {}: {}",
-                              item.getPostId(),
-                              e.getMessage());
+                      if (item.getPostId() != null && finalEnrichment != null) {
+                        dto.setReactionCount(finalEnrichment.getReactionCounts().getOrDefault(item.getPostId(), 0L));
+                        dto.setCommentCount(finalEnrichment.getCommentCounts().getOrDefault(item.getPostId(), 0L));
+                        var reaction = finalEnrichment.getUserReactions().get(item.getPostId());
+                        if (reaction != null) {
+                          dto.setUserReaction(reaction.toString());
+                          dto.setLikedByCurrentUser(true);
                         }
                       }
 
@@ -84,14 +99,12 @@ public class ActivityFeedController {
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(
-            BasePageResponse.<List<ActivityFeedItemDTO>>builder()
-                .status(HttpStatus.OK.value())
-                .message("Feed fetched successfully")
-                .result(dtoList)
-                .pageNumber(feedPage.getNumber())
-                .pageSize(feedPage.getSize())
-                .totalRecords(feedPage.getTotalElements())
-                .build());
+            ApiResponse.success(
+                "Feed fetched successfully",
+                dtoList,
+                feedPage.getNumber(),
+                feedPage.getSize(),
+                feedPage.getTotalElements()));
       }
     } catch (Exception e) {
       log.error("Error fetching feed: {}", e.getMessage());

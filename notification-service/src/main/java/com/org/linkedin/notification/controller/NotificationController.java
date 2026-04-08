@@ -1,12 +1,12 @@
 package com.org.linkedin.notification.controller;
 
-import com.org.linkedin.dto.BaseResponse;
+import com.org.linkedin.dto.ApiResponse;
 import com.org.linkedin.dto.notification.NotificationDTO;
 import com.org.linkedin.notification.service.NotificationService;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,63 +18,46 @@ public class NotificationController {
   private final NotificationService notificationService;
 
   @GetMapping
-  public BaseResponse<List<NotificationDTO>> getMyNotifications(Authentication authentication) {
+  public ResponseEntity<ApiResponse<List<NotificationDTO>>> getMyNotifications(
+      Authentication authentication) {
     List<NotificationDTO> result = notificationService.getMyNotifications(authentication);
-    return BaseResponse.<List<NotificationDTO>>builder()
-        .status(HttpStatus.OK.value())
-        .result(result)
-        .build();
+    return ResponseEntity.ok(ApiResponse.success("Success", result));
   }
 
   @GetMapping("/unread")
-  public BaseResponse<List<NotificationDTO>> getMyUnreadNotifications(
+  public ResponseEntity<ApiResponse<List<NotificationDTO>>> getMyUnreadNotifications(
       Authentication authentication) {
     List<NotificationDTO> result = notificationService.getMyUnreadNotifications(authentication);
-    return BaseResponse.<List<NotificationDTO>>builder()
-        .status(HttpStatus.OK.value())
-        .result(result)
-        .build();
+    return ResponseEntity.ok(ApiResponse.success("Success", result));
   }
 
   @GetMapping("/unread/count")
-  public BaseResponse<Long> getMyUnreadCount(Authentication authentication) {
+  public ResponseEntity<ApiResponse<Long>> getMyUnreadCount(Authentication authentication) {
     long count = notificationService.getMyUnreadCount(authentication);
-    return BaseResponse.<Long>builder().status(HttpStatus.OK.value()).result(count).build();
+    return ResponseEntity.ok(ApiResponse.success("Success", count));
   }
 
   @PutMapping("/{id}/read")
-  public BaseResponse<Void> markAsRead(@PathVariable UUID id) {
+  public ResponseEntity<ApiResponse<Void>> markAsRead(@PathVariable UUID id) {
     notificationService.markAsRead(id);
-    return BaseResponse.<Void>builder()
-        .status(HttpStatus.OK.value())
-        .message("Notification marked as read")
-        .build();
+    return ResponseEntity.ok(ApiResponse.success("Notification marked as read", null));
   }
 
   @PatchMapping("/read-all")
-  public BaseResponse<Void> markAllAsRead(Authentication authentication) {
+  public ResponseEntity<ApiResponse<Void>> markAllAsRead(Authentication authentication) {
     notificationService.markAllAsRead(authentication);
-    return BaseResponse.<Void>builder()
-        .status(HttpStatus.OK.value())
-        .message("All notifications marked as read")
-        .build();
+    return ResponseEntity.ok(ApiResponse.success("All notifications marked as read", null));
   }
 
   @DeleteMapping("/{id}")
-  public BaseResponse<Void> deleteNotification(@PathVariable UUID id) {
+  public ResponseEntity<ApiResponse<Void>> deleteNotification(@PathVariable UUID id) {
     notificationService.deleteNotification(id);
-    return BaseResponse.<Void>builder()
-        .status(HttpStatus.OK.value())
-        .message("Notification deleted")
-        .build();
+    return ResponseEntity.ok(ApiResponse.success("Notification deleted", null));
   }
 
   @DeleteMapping("/all")
-  public BaseResponse<Void> deleteAllNotifications(Authentication authentication) {
+  public ResponseEntity<ApiResponse<Void>> deleteAllNotifications(Authentication authentication) {
     notificationService.deleteAllNotifications(authentication);
-    return BaseResponse.<Void>builder()
-        .status(HttpStatus.OK.value())
-        .message("All notifications deleted")
-        .build();
+    return ResponseEntity.ok(ApiResponse.success("All notifications deleted", null));
   }
 }

@@ -9,7 +9,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "profile_views")
+@Table(
+    name = "profile_views",
+    indexes = {@Index(name = "idx_profile_view_owner_ts", columnList = "profile_owner_id, viewed_at DESC")})
 @Data
 @Builder
 @NoArgsConstructor
@@ -27,4 +29,10 @@ public class ProfileView {
 
   @Column(name = "viewed_at")
   private LocalDateTime viewedAt;
+
+  @Column(name = "viewer_designation")
+  private String viewerDesignation;
+
+  @Column(name = "viewer_company")
+  private String viewerCompany;
 }

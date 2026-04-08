@@ -42,7 +42,7 @@ public class ConnectionServiceImpl implements ConnectionService {
         userService
             .getUserByKeyCloakId(UUID.fromString(authentication.getName()))
             .getBody()
-            .getResult()
+            .getData()
             .getId();
     log.info("Sending connection request from {} to {}", requesterId, receiverId);
 
@@ -79,7 +79,7 @@ public class ConnectionServiceImpl implements ConnectionService {
         userService
             .getUserByKeyCloakId(UUID.fromString(authentication.getName()))
             .getBody()
-            .getResult()
+            .getData()
             .getId();
     Connection connection =
         repository
@@ -110,7 +110,7 @@ public class ConnectionServiceImpl implements ConnectionService {
         userService
             .getUserByKeyCloakId(UUID.fromString(authentication.getName()))
             .getBody()
-            .getResult()
+            .getData()
             .getId();
     Connection connection =
         repository
@@ -134,7 +134,7 @@ public class ConnectionServiceImpl implements ConnectionService {
         userService
             .getUserByKeyCloakId(UUID.fromString(authentication.getName()))
             .getBody()
-            .getResult()
+            .getData()
             .getId();
     List<Connection> sent =
         repository.findByRequesterIdAndStatus(userId, ConnectionStatus.ACCEPTED);
@@ -150,7 +150,7 @@ public class ConnectionServiceImpl implements ConnectionService {
         userService
             .getUserByKeyCloakId(UUID.fromString(authentication.getName()))
             .getBody()
-            .getResult()
+            .getData()
             .getId();
     List<Connection> pending =
         repository.findByReceiverIdAndStatus(userId, ConnectionStatus.PENDING);
@@ -169,7 +169,7 @@ public class ConnectionServiceImpl implements ConnectionService {
         userService
             .getUserByKeyCloakId(UUID.fromString(authentication.getName()))
             .getBody()
-            .getResult()
+            .getData()
             .getId();
 
     Optional<Connection> sent = repository.findByRequesterIdAndReceiverId(userId, otherUserId);

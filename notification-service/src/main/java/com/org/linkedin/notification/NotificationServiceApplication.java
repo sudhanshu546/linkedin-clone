@@ -11,7 +11,11 @@ import org.springframework.context.annotation.ComponentScan;
 @EnableDiscoveryClient
 @EnableFeignClients(basePackages = "com.org.linkedin.utility.client")
 @ComponentScan(
-    basePackages = {"com.org.linkedin.utility", "com.org.linkedin.notification"},
+    basePackages = {
+      "com.org.linkedin.utility",
+      "com.org.linkedin.notification",
+      "com.org.linkedin.dto"
+    },
     basePackageClasses = FeignAuthenticationInterceptor.class)
 public class NotificationServiceApplication {
   public static void main(String[] args) {

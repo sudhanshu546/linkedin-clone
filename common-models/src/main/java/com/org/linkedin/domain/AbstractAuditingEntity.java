@@ -6,6 +6,8 @@ import jakarta.persistence.MappedSuperclass;
 import java.io.Serial;
 import java.io.Serializable;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -19,6 +21,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
 @Data
+@SuperBuilder
+@NoArgsConstructor
 public abstract class AbstractAuditingEntity<T> implements Serializable {
 
   @Serial private static final long serialVersionUID = 1L;
@@ -31,7 +35,7 @@ public abstract class AbstractAuditingEntity<T> implements Serializable {
 
   @CreatedDate
   @Column(name = "created_at", updatable = false)
-  private Long createdAt = System.currentTimeMillis();
+  private Long createdDate = System.currentTimeMillis();
 
   @LastModifiedBy
   @Column(name = "last_modified_by")
@@ -39,7 +43,7 @@ public abstract class AbstractAuditingEntity<T> implements Serializable {
 
   @LastModifiedDate
   @Column(name = "updated_at")
-  private Long updatedAt = System.currentTimeMillis();
+  private Long lastModifiedDate = System.currentTimeMillis();
 
   @Column(name = "is_deleted", columnDefinition = "boolean default false")
   private Boolean isDeleted;

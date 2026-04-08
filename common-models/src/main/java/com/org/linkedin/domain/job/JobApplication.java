@@ -4,14 +4,14 @@ import com.org.linkedin.domain.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import java.util.UUID;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "job_applications")
-@Getter
-@Setter
+@Data
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class JobApplication extends AbstractAuditingEntity<UUID> {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
@@ -25,4 +25,10 @@ public class JobApplication extends AbstractAuditingEntity<UUID> {
 
   @Column(nullable = false)
   private String status; // PENDING, ACCEPTED, REJECTED
+
+  @Column(name = "resume_url")
+  private String resumeUrl;
+
+  @Column(name = "cover_letter", length = 2000)
+  private String coverLetter;
 }

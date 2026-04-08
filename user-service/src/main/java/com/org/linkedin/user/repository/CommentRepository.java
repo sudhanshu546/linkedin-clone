@@ -8,9 +8,13 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface CommentRepository extends JpaRepository<Comment, UUID> {
-  List<Comment> findByPostIdOrderByCreatedAtDesc(UUID postId);
+  List<Comment> findByPostIdOrderByCreatedDateDesc(UUID postId);
 
   long countByPostId(UUID postId);
 
+  List<Comment> findByPostIdIn(java.util.Collection<UUID> postIds);
+
   void deleteByPostId(UUID postId);
+
+  void deleteByUserId(UUID id);
 }

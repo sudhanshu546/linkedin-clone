@@ -20,5 +20,9 @@ public class Constants {
 
   public static final String IS_DELETED = "isDeleted";
 
+  public static final String LAST_MODIFIED_DATE = "lastModifiedDate";
+
+  public static final String CREATED_DATE = "createdDate";
+
   public static final String ENUM = "Enum";
 }

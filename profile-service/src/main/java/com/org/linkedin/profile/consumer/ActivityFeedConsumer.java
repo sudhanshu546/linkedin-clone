@@ -1,10 +1,8 @@
 package com.org.linkedin.profile.consumer;
 
-import com.org.linkedin.dto.event.CommentCreatedEvent;
-import com.org.linkedin.dto.event.ConnectionAcceptedEvent;
-import com.org.linkedin.dto.event.ConnectionRequestedEvent;
-import com.org.linkedin.dto.event.PostCreatedEvent;
-import com.org.linkedin.dto.event.PostLikedEvent;
+import static com.org.linkedin.utility.ProjectConstants.GROUP_PROFILE_FEED;
+
+import com.org.linkedin.dto.event.*;
 import com.org.linkedin.profile.domain.Post;
 import com.org.linkedin.profile.repo.PostRepository;
 import com.org.linkedin.profile.service.ActivityFeedService;
@@ -23,7 +21,7 @@ public class ActivityFeedConsumer {
   private final ActivityFeedService activityFeedService;
   private final PostRepository postRepository;
 
-  @KafkaListener(topics = "${kafka.topics.post-created}", groupId = "profile-service-feed-group")
+  @KafkaListener(topics = "${kafka.topics.post-created}", groupId = GROUP_PROFILE_FEED)
   public void consumePostCreatedEvent(@Payload PostCreatedEvent event) {
     log.info("!!! KAFKA RECEIVED !!! PostCreatedEvent: {}", event);
     try {
@@ -35,7 +33,8 @@ public class ActivityFeedConsumer {
               .content(event.getContent())
               .imageUrl(event.getImageUrl())
               .imageUrls(event.getImageUrls())
-              .createdAt(java.time.LocalDateTime.now())
+              .isPoll(event.isPoll())
+              .createdDate(System.currentTimeMillis())
               .build();
       postRepository.save(post);
       log.info("Post saved to profile-service DB: {}", post.getPostId());
@@ -47,29 +46,25 @@ public class ActivityFeedConsumer {
     }
   }
 
-  @KafkaListener(topics = "${kafka.topics.post-liked}", groupId = "profile-service-feed-group")
-  public void consumePostLikedEvent(PostLikedEvent event) {
-    log.info("Received PostLikedEvent: {}", event);
+  @KafkaListener(topics = "${kafka.topics.post-reacted}", groupId = GROUP_PROFILE_FEED)
+  public void consumePostReactedEvent(PostReactedEvent event) {
+    log.info("Received PostReactedEvent: {}", event);
     activityFeedService.createFeedItem(event);
   }
 
-  @KafkaListener(topics = "${kafka.topics.comment-created}", groupId = "profile-service-feed-group")
+  @KafkaListener(topics = "${kafka.topics.comment-created}", groupId = GROUP_PROFILE_FEED)
   public void consumeCommentCreatedEvent(CommentCreatedEvent event) {
     log.info("Received CommentCreatedEvent: {}", event);
     activityFeedService.createFeedItem(event);
   }
 
-  @KafkaListener(
-      topics = "${kafka.topics.connection-requested}",
-      groupId = "profile-service-feed-group")
+  @KafkaListener(topics = "${kafka.topics.connection-requested}", groupId = GROUP_PROFILE_FEED)
   public void consumeConnectionRequestedEvent(ConnectionRequestedEvent event) {
     log.info("Received ConnectionRequestedEvent: {}", event);
     activityFeedService.createFeedItem(event);
   }
 
-  @KafkaListener(
-      topics = "${kafka.topics.connection-accepted}",
-      groupId = "profile-service-feed-group")
+  @KafkaListener(topics = "${kafka.topics.connection-accepted}", groupId = GROUP_PROFILE_FEED)
   public void consumeConnectionAcceptedEvent(ConnectionAcceptedEvent event) {
     log.info("Received ConnectionAcceptedEvent: {}", event);
     activityFeedService.createFeedItem(event);

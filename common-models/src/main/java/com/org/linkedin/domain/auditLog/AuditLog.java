@@ -10,15 +10,18 @@ import jakarta.validation.constraints.NotNull;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.UUID;
-import lombok.AccessLevel;
-import lombok.Data;
+import lombok.*;
 import lombok.experimental.FieldDefaults;
+import lombok.experimental.SuperBuilder;
 
 /** A Logger. */
 @Entity
 @Table(name = "audit_log")
-@FieldDefaults(level = AccessLevel.PRIVATE)
 @Data
+@SuperBuilder
+@NoArgsConstructor
+@AllArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class AuditLog extends AbstractAuditingEntity<UUID> implements Serializable {
 
   @Serial private static final long serialVersionUID = 1L;

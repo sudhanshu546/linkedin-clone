@@ -13,7 +13,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface JobRepository extends JpaRepository<Job, UUID> {
 
-  List<Job> findByPostedByOrderByCreatedAtDesc(UUID postedBy);
+  List<Job> findByPostedByOrderByCreatedDateDesc(UUID postedBy);
 
   @Query(
       "SELECT j FROM Job j WHERE "

@@ -6,11 +6,14 @@ import jakarta.validation.constraints.*;
 import java.io.Serializable;
 import java.util.UUID;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.FieldDefaults;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
@@ -20,6 +23,9 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 @Getter
 @Setter
+@SuperBuilder
+@NoArgsConstructor
+@AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
 @ToString(callSuper = false)
 @FieldDefaults(level = AccessLevel.PRIVATE)
@@ -39,8 +45,6 @@ public class TUser extends AbstractAuditingEntity<UUID> implements Serializable 
   @Column(name = "email", length = 255, nullable = false)
   String email;
 
-  String password;
-
   @NotNull
   @Size(max = 255)
   @Column(name = "first_name", length = 255, nullable = false)
@@ -52,6 +56,4 @@ public class TUser extends AbstractAuditingEntity<UUID> implements Serializable 
 
   @Column(name = "profile_image_url")
   String profileImageUrl;
-
-  boolean enabled;
 }

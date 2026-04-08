@@ -1,4 +1,3 @@
 package com.org.linkedin.utility.service;
 
-public class NotificationMSG {
-}
+public class NotificationMSG {}

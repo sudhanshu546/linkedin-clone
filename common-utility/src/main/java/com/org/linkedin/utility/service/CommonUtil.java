@@ -83,12 +83,12 @@ public class CommonUtil {
    * @param filters the list of filters to which the sorting filter will be added
    */
   public void sortByLatestRecord(List<AdvanceSearchCriteria.Filter> filters) {
-    AdvanceSearchCriteria.Filter updatedByLatestGroupBooking = new AdvanceSearchCriteria.Filter();
-    updatedByLatestGroupBooking.setColumnName("lastModifiedDate");
-    updatedByLatestGroupBooking.setRelation(AdvancedFilterRelation.AND);
-    updatedByLatestGroupBooking.setSortDirection(AdvancedFilterSortDirection.DESC);
-    // add default filter of updated by latest group-booking
-    filters.add(updatedByLatestGroupBooking);
+    AdvanceSearchCriteria.Filter updatedByLatest = new AdvanceSearchCriteria.Filter();
+    updatedByLatest.setColumnName(Constants.LAST_MODIFIED_DATE);
+    updatedByLatest.setRelation(AdvancedFilterRelation.AND);
+    updatedByLatest.setSortDirection(AdvancedFilterSortDirection.DESC);
+    // add default filter of updated by latest
+    filters.add(updatedByLatest);
   }
 
   public long getTotalCount(Class<?> className, List<AdvanceSearchCriteria.Filter> filters) {

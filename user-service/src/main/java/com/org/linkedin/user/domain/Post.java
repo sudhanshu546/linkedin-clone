@@ -5,14 +5,16 @@ import jakarta.persistence.*;
 import java.util.List;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 @Entity
-@Table(name = "posts")
+@Table(
+    name = "posts",
+    indexes = {@Index(name = "idx_post_author_id", columnList = "author_id")})
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Post extends AbstractAuditingEntity<UUID> {
@@ -35,4 +37,16 @@ public class Post extends AbstractAuditingEntity<UUID> {
   @CollectionTable(name = "post_images", joinColumns = @JoinColumn(name = "post_id"))
   @Column(name = "image_url")
   private List<String> imageUrls;
+
+  @Column(name = "is_poll")
+  private boolean isPoll;
+
+  @Column(name = "poll_question")
+  private String pollQuestion;
+
+  @Column(name = "poll_expiry_date")
+  private java.time.LocalDateTime pollExpiryDate;
+
+  @Column(name = "comments_disabled")
+  private boolean commentsDisabled;
 }

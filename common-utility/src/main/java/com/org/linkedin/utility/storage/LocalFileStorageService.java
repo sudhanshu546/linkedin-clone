@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
+import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
@@ -24,8 +25,20 @@ public class LocalFileStorageService implements FileStorageService {
       Files.createDirectories(root);
     }
     String filename = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-    Files.copy(file.getInputStream(), root.resolve(filename));
-    return filename; // For local, we just return the filename
+    Path targetPath = root.resolve(filename);
+
+    String contentType = file.getContentType();
+    // Optimize images (except GIFs to preserve animation)
+    if (contentType != null && contentType.startsWith("image/") && !contentType.contains("gif")) {
+      Thumbnails.of(file.getInputStream())
+          .size(1200, 1200)
+          .outputQuality(0.8)
+          .toFile(targetPath.toFile());
+    } else {
+      Files.copy(file.getInputStream(), targetPath);
+    }
+    
+    return filename; 
   }
 
   @Override

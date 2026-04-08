@@ -1,8 +1,7 @@
 package com.org.linkedin.user.controller;
 
 import com.org.linkedin.constants.Constants;
-import com.org.linkedin.dto.BasePageResponse;
-import com.org.linkedin.dto.BaseResponse;
+import com.org.linkedin.dto.ApiResponse;
 import com.org.linkedin.dto.user.RoleDTO;
 import com.org.linkedin.user.service.KeyCloakAdminService;
 import com.org.linkedin.user.utility.PaginationUtil;
@@ -38,149 +37,62 @@ public class KeyCloakAdminController {
 
   //  @PreAuthorize("hasRole('SystemAdmin')")
   @PostMapping("/role")
-  public ResponseEntity<BaseResponse<RoleDTO>> save(@RequestBody @Valid RoleDTO requestedRole) {
-    log.trace("Enter save method :: :: requestedRole {}", requestedRole);
+  public ResponseEntity<ApiResponse<RoleDTO>> save(@RequestBody @Valid RoleDTO requestedRole) {
+    log.debug("Enter save method :: :: requestedRole {}", requestedRole);
     RoleDTO role = keyCloakAdminService.save(requestedRole);
-    BaseResponse<RoleDTO> returnValue =
-        BaseResponse.<RoleDTO>builder().status(HttpStatus.CREATED.value()).result(role).build();
-    log.trace("Exit save method :: [{}]", returnValue);
-    return ResponseEntity.ok(returnValue);
+    return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Success", role));
   }
 
   @PreAuthorize("hasRole('SystemAdmin') or hasRole('Tenant')")
   @GetMapping("/role")
-  public ResponseEntity<BasePageResponse<List<RoleDTO>>> getAllRoles(Pageable pageable) {
-    log.trace("Enter getAllRoles method ");
+  public ResponseEntity<ApiResponse<List<RoleDTO>>> getAllRoles(Pageable pageable) {
+    log.debug("Enter getAllRoles method ");
     Page<RoleDTO> roles = keyCloakAdminService.getAllRoles(pageable);
     HttpHeaders headers =
         PaginationUtil.generatePaginationHttpHeaders(
             ServletUriComponentsBuilder.fromCurrentRequest(), roles);
-    BasePageResponse<List<RoleDTO>> returnValue =
-        BasePageResponse.<List<RoleDTO>>builder()
-            .pageNumber(roles.getNumber())
-            .pageSize(roles.getSize())
-            .status(HttpStatus.OK.value())
-            .result(roles.getContent())
-            .totalRecords(roles.getTotalElements())
-            .build();
-    log.trace("Exit getAllRoles method :: [{}]", returnValue);
-    return ResponseEntity.ok().headers(headers).body(returnValue);
+    return ResponseEntity.ok()
+        .headers(headers)
+        .body(
+            ApiResponse.success(
+                "Success",
+                roles.getContent(),
+                roles.getNumber(),
+                roles.getSize(),
+                roles.getTotalElements()));
   }
 
   @PreAuthorize("hasRole('SystemAdmin') or hasRole('Tenant')")
   @GetMapping("/role/{id}")
-  public ResponseEntity<BaseResponse<RoleDTO>> getRoleById(@PathVariable("id") UUID roleId) {
-    log.trace("Enter getRoleById method :: :: roleId :: [{}]", roleId);
+  public ResponseEntity<ApiResponse<RoleDTO>> getRoleById(@PathVariable("id") UUID roleId) {
+    log.debug("Enter getRoleById method :: :: roleId :: [{}]", roleId);
     RoleDTO role = keyCloakAdminService.getRoleById(roleId);
-    BaseResponse<RoleDTO> returnValue =
-        BaseResponse.<RoleDTO>builder().status(HttpStatus.OK.value()).result(role).build();
-    log.trace("Exit getRoleById method :: [{}]", returnValue);
-    return ResponseEntity.ok().body(returnValue);
+    return ResponseEntity.ok(ApiResponse.success("Success", role));
   }
 
   @PreAuthorize("hasRole('SystemAdmin')")
   @PostMapping("/assignRole")
-  public ResponseEntity<BaseResponse<RoleDTO>> assignRoleToUser(
+  public ResponseEntity<ApiResponse<Void>> assignRoleToUser(
       @RequestParam("roleId") UUID roleId, @RequestParam("keycloakUserId") UUID userId) {
-    log.trace("Enter assignRoleToUser method :: :: roleId :: [{}]", roleId);
+    log.debug("Enter assignRoleToUser method :: :: roleId :: [{}]", roleId);
     keyCloakAdminService.assignRoleToUser(roleId, userId);
-    BaseResponse<RoleDTO> returnValue =
-        BaseResponse.<RoleDTO>builder()
-            .status(HttpStatus.OK.value())
-            .message("ROLE_ASSIGNED_SUCCESSFULLY")
-            .build();
-    log.trace("Exit assignRoleToUser method :: [{}]", returnValue);
-    return ResponseEntity.ok().body(returnValue);
+    return ResponseEntity.ok(ApiResponse.success("ROLE_ASSIGNED_SUCCESSFULLY", null));
   }
 
   @PreAuthorize("hasRole('SystemAdmin')")
   @DeleteMapping("/role/{id}")
-  public ResponseEntity<BaseResponse<Void>> deleteRole(@PathVariable("id") UUID roleId) {
-    log.trace("Enter deleteRole method :: :: roleId :: [{}]", roleId);
+  public ResponseEntity<ApiResponse<Void>> deleteRole(@PathVariable("id") UUID roleId) {
+    log.debug("Enter deleteRole method :: :: roleId :: [{}]", roleId);
     keyCloakAdminService.deleteRole(roleId);
-    BaseResponse<Void> returnValue =
-        BaseResponse.<Void>builder()
-            .status(HttpStatus.OK.value())
-            .result(null)
-            .message(Constants.OPERATION_SUCCESSFUL)
-            .build();
-    log.trace("Exit deleteRole method :: [{}]", returnValue);
-    return ResponseEntity.ok().body(returnValue);
+    return ResponseEntity.ok(ApiResponse.success(Constants.OPERATION_SUCCESSFUL, null));
   }
 
   @PreAuthorize("hasRole('SystemAdmin')")
   @PutMapping("/role/{id}")
-  public ResponseEntity<BaseResponse<RoleDTO>> updateRole(
+  public ResponseEntity<ApiResponse<RoleDTO>> updateRole(
       @PathVariable("id") UUID roleId, @RequestBody RoleDTO requestedRole) {
-    log.trace("Enter updateRole method :: :: roleId :: [{}]", roleId);
+    log.debug("Enter updateRole method :: :: roleId :: [{}]", roleId);
     RoleDTO role = keyCloakAdminService.updateRole(roleId, requestedRole);
-    BaseResponse<RoleDTO> returnValue =
-        BaseResponse.<RoleDTO>builder().status(HttpStatus.OK.value()).result(role).build();
-    log.trace("Exit updateRole method :: [{}]", returnValue);
-    return ResponseEntity.ok().body(returnValue);
+    return ResponseEntity.ok(ApiResponse.success("Success", role));
   }
-
-  //  @PreAuthorize("hasRole('SystemAdmin')")
-  //  @GetMapping("/resources")
-  //  public ResponseEntity<BaseResponse<List<ResourceScopePermissionInfo>>> getResources(
-  //      Authentication authentication) {
-  //    List<ResourceScopePermissionInfo> resources = keyCloakAdminService.getResources();
-  //    BaseResponse<List<ResourceScopePermissionInfo>> returnValue =
-  //        BaseResponse.<List<ResourceScopePermissionInfo>>builder()
-  //            .status(HttpStatus.OK.value())
-  //            .result(resources)
-  //            .build();
-  //    log.trace("Exit getUserDetailsById method :: [{}]", returnValue);
-  //    return ResponseEntity.ok(returnValue);
-  //  }
-
-  //  @PreAuthorize("hasRole('SystemAdmin')")
-  //  @GetMapping("/role/{roleId}/permissions")
-  //  public ResponseEntity<BaseResponse<List<ResourceScopePermissionInfo>>> getPermissionsByRoleId(
-  //      @PathVariable(value = "roleId") UUID roleId) {
-  //    log.trace("Enter getResourcesByRoleId method :: ::  roleId :: [{}]", roleId);
-  //    List<ResourceScopePermissionInfo> permissions =
-  //        keyCloakAdminService.getPermissionsByRoleId(roleId);
-  //    BaseResponse<List<ResourceScopePermissionInfo>> returnValue =
-  //        BaseResponse.<List<ResourceScopePermissionInfo>>builder()
-  //            .status(HttpStatus.OK.value())
-  //            .result(permissions)
-  //            .build();
-  //    log.trace("Exit getResourcesByRoleId method :: [{}]", returnValue);
-  //    return ResponseEntity.ok(returnValue);
-  //  }
-
-  //  @PreAuthorize("hasRole('SystemAdmin')")
-  //  @GetMapping("/role/{roleId}/unlinked-permissions")
-  //  public ResponseEntity<BaseResponse<List<ResourceScopePermissionInfo>>>
-  //      getNonAssociatedRoleIdPermissions(@PathVariable(value = "roleId") UUID roleId) {
-  //    log.trace("Enter getNonAssociatedRoleIdPermissions method :: ::  roleId :: [{}]", roleId);
-  //    List<ResourceScopePermissionInfo> permissions =
-  //        keyCloakAdminService.getNonAssociatedRoleIdPermissions(roleId);
-  //    BaseResponse<List<ResourceScopePermissionInfo>> returnValue =
-  //        BaseResponse.<List<ResourceScopePermissionInfo>>builder()
-  //            .status(HttpStatus.OK.value())
-  //            .result(permissions)
-  //            .build();
-  //    log.trace("Exit getNonAssociatedRoleIdPermissions method :: [{}]", returnValue);
-  //    return ResponseEntity.ok(returnValue);
-  //  }
-
-  //  @PreAuthorize("hasRole('SystemAdmin')")
-  //  @PostMapping("/role/{roleId}/permissions")
-  //  public ResponseEntity<BaseResponse<List<ResourceScopePermissionInfo>>>
-  // updatePermissionsByRoleId(
-  //      @PathVariable(value = "roleId") UUID roleId,
-  //      @RequestBody List<ResourceScopePermissionInfo> updatedResources) {
-  //    log.trace("Enter updatePermissionsByRoleId method :: ::  roleId :: [{}]", roleId);
-  //    List<ResourceScopePermissionInfo> permissions =
-  //        keyCloakAdminService.updatePermissionsByRoleId(roleId, updatedResources);
-  //    BaseResponse<List<ResourceScopePermissionInfo>> returnValue =
-  //        BaseResponse.<List<ResourceScopePermissionInfo>>builder()
-  //            .status(HttpStatus.OK.value())
-  //            .result(permissions)
-  //            .build();
-  //    log.trace("Exit updatePermissionsByRoleId method :: [{}]", returnValue);
-  //    return ResponseEntity.ok(returnValue);
-  //  }
 }

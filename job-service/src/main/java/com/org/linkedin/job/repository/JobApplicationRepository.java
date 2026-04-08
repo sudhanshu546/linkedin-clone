@@ -9,9 +9,11 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface JobApplicationRepository extends JpaRepository<JobApplication, UUID> {
-  List<JobApplication> findByJobIdOrderByCreatedAtDesc(UUID jobId);
+  List<JobApplication> findByJobIdOrderByCreatedDateDesc(UUID jobId);
 
-  List<JobApplication> findByApplicantIdOrderByCreatedAtDesc(UUID applicantId);
+  List<JobApplication> findByJobIdAndStatusOrderByCreatedDateDesc(UUID jobId, String status);
+
+  List<JobApplication> findByApplicantIdOrderByCreatedDateDesc(UUID applicantId);
 
   Optional<JobApplication> findByJobIdAndApplicantId(UUID jobId, UUID applicantId);
 }

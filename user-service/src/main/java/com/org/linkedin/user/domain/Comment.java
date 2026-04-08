@@ -4,14 +4,16 @@ import com.org.linkedin.domain.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 @Entity
-@Table(name = "post_comments")
+@Table(
+    name = "post_comments",
+    indexes = {@Index(name = "idx_comment_post_id", columnList = "post_id")})
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Comment extends AbstractAuditingEntity<UUID> {
@@ -21,6 +23,9 @@ public class Comment extends AbstractAuditingEntity<UUID> {
 
   @Column(name = "post_id", nullable = false)
   private UUID postId;
+
+  @Column(name = "parent_id")
+  private UUID parentId;
 
   @Column(name = "user_id", nullable = false)
   private UUID userId;

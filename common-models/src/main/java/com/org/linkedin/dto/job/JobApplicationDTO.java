@@ -18,4 +18,6 @@ public class JobApplicationDTO {
   private String status;
   private Long appliedDate;
   private TUserDTO applicant;
+  private String resumeUrl;
+  private String coverLetter;
 }

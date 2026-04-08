@@ -6,13 +6,15 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "profile", uniqueConstraints = @UniqueConstraint(columnNames = "user_id"))
-@Getter
-@Setter
+@Data
+@SuperBuilder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Profile extends AbstractAuditingEntity<UUID> implements Serializable {
 
   @Id
@@ -41,9 +43,21 @@ public class Profile extends AbstractAuditingEntity<UUID> implements Serializabl
 
   @OneToMany(mappedBy = "profile", cascade = CascadeType.ALL, orphanRemoval = true)
   @JsonManagedReference
+  @Builder.Default
   private List<Experience> experience = new ArrayList<>();
 
   @OneToMany(mappedBy = "profile", cascade = CascadeType.ALL, orphanRemoval = true)
   @JsonManagedReference
+  @Builder.Default
   private List<Education> education = new ArrayList<>();
+
+  @OneToMany(mappedBy = "profile", cascade = CascadeType.ALL, orphanRemoval = true)
+  @JsonManagedReference
+  @Builder.Default
+  private List<ProfileSkill> skillsList = new ArrayList<>();
+
+  @OneToMany(mappedBy = "profile", cascade = CascadeType.ALL, orphanRemoval = true)
+  @JsonManagedReference
+  @Builder.Default
+  private List<Recommendation> recommendations = new ArrayList<>();
 }

@@ -32,11 +32,11 @@ public class ChatServiceImpl implements ChatService {
   @Override
   public List<ChatMessageDTO> getChatMessages(Authentication authentication, UUID recipientId) {
     UUID keycloakId = UUID.fromString(authentication.getName());
-    UUID senderId = userService.getUserByKeyCloakId(keycloakId).getBody().getResult().getId();
+    UUID senderId = userService.getUserByKeyCloakId(keycloakId).getBody().getData().getId();
 
     List<ChatMessage> messages =
         chatMessageRepository
-            .findBySenderIdAndRecipientIdOrSenderIdAndRecipientIdOrderByCreatedAtAsc(
+            .findBySenderIdAndRecipientIdOrSenderIdAndRecipientIdOrderByCreatedDateAsc(
                 senderId, recipientId, recipientId, senderId);
     return chatMapper.toDto(messages);
   }
@@ -45,7 +45,7 @@ public class ChatServiceImpl implements ChatService {
   @Transactional
   public void markAsRead(Authentication authentication, UUID senderId) {
     UUID keycloakId = UUID.fromString(authentication.getName());
-    UUID recipientId = userService.getUserByKeyCloakId(keycloakId).getBody().getResult().getId();
+    UUID recipientId = userService.getUserByKeyCloakId(keycloakId).getBody().getData().getId();
     chatMessageRepository.markMessagesAsRead(recipientId, senderId);
   }
 }

@@ -34,4 +34,7 @@ public class ProfileDTO {
   private String designation;
 
   private String coverImageUrl;
+
+  private java.util.List<ProfileSkillDTO> skillsList;
+  private java.util.List<RecommendationDTO> recommendations;
 }

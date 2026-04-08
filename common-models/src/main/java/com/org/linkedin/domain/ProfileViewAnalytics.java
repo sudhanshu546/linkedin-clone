@@ -5,14 +5,14 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "profile_view_analytics")
-@Getter
-@Setter
+@Data
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class ProfileViewAnalytics extends AbstractAuditingEntity<UUID> implements Serializable {
 
   @Id

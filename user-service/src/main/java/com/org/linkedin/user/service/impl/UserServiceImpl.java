@@ -1,52 +1,62 @@
 package com.org.linkedin.user.service.impl;
 
+import static com.org.linkedin.utility.ProjectConstants.*;
 import static com.org.linkedin.utility.errors.ErrorKeys.FILE_SIZE_EXCEEDED;
 import static com.org.linkedin.utility.errors.ErrorKeys.INVALID_FILE_FORMAT;
 import static com.org.linkedin.utility.errors.ErrorKeys.INVALID_TOKEN_FORMAT;
-import static com.org.linkedin.utility.errors.ErrorKeys.USER_NOT_FOUND;
 
-import com.org.linkedin.domain.user.Role;
 import com.org.linkedin.domain.user.TUser;
+import com.org.linkedin.dto.event.UserUpdatedEvent;
 import com.org.linkedin.dto.user.ChangePassword;
+import com.org.linkedin.dto.user.PrivacySettingsDTO;
 import com.org.linkedin.dto.user.TUserDTO;
 import com.org.linkedin.user.config.AsyncCalls;
 import com.org.linkedin.user.config.CryptUtil;
 import com.org.linkedin.user.config.keycloak.KeycloakClients;
+import com.org.linkedin.user.domain.PrivacySettings;
+import com.org.linkedin.user.domain.UserBlock;
 import com.org.linkedin.user.mapper.TUserMapper;
-import com.org.linkedin.user.repository.RoleRepository;
-import com.org.linkedin.user.repository.UserRepository;
+import com.org.linkedin.user.repository.*;
 import com.org.linkedin.user.service.UserService;
 import com.org.linkedin.user.utility.KeyCloakUtil;
 import com.org.linkedin.utility.errors.ErrorKeys;
-import com.org.linkedin.utility.exception.CommonExceptionHandler;
+import com.org.linkedin.utility.exception.ConflictException;
+import com.org.linkedin.utility.exception.ResourceNotFoundException;
+import com.org.linkedin.utility.exception.ValidationException;
+import com.org.linkedin.utility.service.AdvanceSearchCriteria;
 import com.org.linkedin.utility.service.CommonUtil;
 import com.org.linkedin.utility.storage.FileStorageService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import jakarta.ws.rs.core.Response;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.http.MediaType;
+
+/**
+ * Implementation of UserService responsible for user account lifecycle, 
+ * identity synchronization with Keycloak, and user discovery.
+ * Uses Redis caching to provide high performance for identity lookups.
+ */
 @Service
 @Transactional
 @Slf4j
@@ -56,6 +66,10 @@ public class UserServiceImpl implements UserService {
   private final UserRepository userRepository;
 
   private final RoleRepository roleRepository;
+
+  private final PrivacySettingsRepository privacySettingsRepository;
+
+  private final UserBlockRepository userBlockRepository;
 
   private final KeyCloakUtil keyCloakUtil;
 
@@ -79,290 +93,208 @@ public class UserServiceImpl implements UserService {
 
   private final FileStorageService fileStorageService;
 
+  private final KafkaTemplate<String, Object> kafkaTemplate;
+
+  /**
+   * Search for users by keyword (first name or last name).
+   */
   @Override
   public List<TUserDTO> searchUsers(String query) {
-    log.trace("Enter searchUsers method :: query [{}]", query);
+    log.debug("Enter searchUsers method :: query [{}]", query);
     List<TUser> users =
         userRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(
             query, query);
-    log.trace("Exit searchUsers method");
+    log.debug("Exit searchUsers method");
     return users.stream().map(userMapper::toDto).collect(Collectors.toList());
   }
 
   /**
-   * Saves an user to the database and Keycloak.
-   *
-   * <p>This method first converts the email in the {@link "UserDTO"} to lowercase and checks for
-   * its existence in the database. If the email already exists, it throws a {@link
-   * CommonExceptionHandler} with the error key {@link
-   * ErrorKeys#USER_ALREADY_EXISTS_WITH_THIS_EMAIL}. If this combination exists, it throws a {@link
-   * CommonExceptionHandler} with the error key {@link ErrorKeys#"ID_NUMBER_EXISTS_ON_THIS_NIN"}.
-   *
-   * <p>If the checks pass, the method proceeds to map the {@link "UserDTO"} to an {@link "User"}
-   * entity, save the user in Keycloak, and then save the user entity in the database. The Keycloak
-   * user ID is also set in the user entity before saving it.
-   *
-   * @param userDTO the user data transfer object containing user details
-   * @param clientName the client name for which the user is being saved, used for Keycloak
-   *     configuration
-   * @throws CommonExceptionHandler if the email already exists
+   * Performs complex multi-field search based on dynamic criteria.
    */
   @Override
-  public void save(TUserDTO userDTO, String clientName) {
-    log.trace("Enter save method :: userDTO [{}] :: clientName [{}]", userDTO, clientName);
+  public Page<TUserDTO> advancedSearch(AdvanceSearchCriteria criteria) {
+    log.debug("Entering advancedSearch for Users");
 
-    if (userRepository.existsByEmail(userDTO.getEmail())) {
-      log.debug("Duplicate User found to save User Request ::  [{}]", userDTO);
-      throw new CommonExceptionHandler(
-          ErrorKeys.USER_ALREADY_EXISTS_WITH_THIS_EMAIL, HttpStatus.BAD_REQUEST.value());
+    Pageable pageable;
+    if (criteria == null) {
+      pageable = PageRequest.of(0, 20);
+      criteria = new AdvanceSearchCriteria();
+      criteria.setFilters(new ArrayList<>());
+    } else {
+      pageable = PageRequest.of(criteria.getPageNumber(), criteria.getPageSize());
+      if (criteria.getFilters() == null) {
+        criteria.setFilters(new ArrayList<>());
+      }
     }
 
-    //    UUID roleId = userDTO.getRole().getId();
+    List<AdvanceSearchCriteria.Filter> filters = criteria.getFilters();
 
-    //    if (roleId == null) {
-    //      throw new CommonExceptionHandler(ErrorKeys.INVALID_ROLE,
-    // HttpStatus.BAD_REQUEST.value());
-    //    }
-    //    Optional<Role> roleOpt = roleRepository.findById(roleId);
-    //    if (roleOpt.isEmpty()) {
-    //      throw new CommonExceptionHandler(ErrorKeys.INVALID_ROLE_ID,
-    // HttpStatus.BAD_REQUEST.value());
-    //    }
-    //    Role dbRole = roleOpt.get();
-    TUser user = userMapper.toEntity(userDTO);
-    log.info("user is :: [{}]", user);
-    UUID keyCloakUserId = UUID.fromString(keyCloakUtil.saveUser(userDTO, clientName, "USER"));
-    String password = generatePassword();
-    userDTO.setPassword(password);
-    log.trace("Key Cloak user id is :: [{}]", keyCloakUserId);
-    user.setKeycloakUserId(keyCloakUserId);
-    user.setPassword(Base64.getEncoder().encodeToString(userDTO.getPassword().getBytes()));
-    // save email in db
-    user.setEmail(user.getEmail().toLowerCase());
-    user = userRepository.save(user);
-    userMapper.toDto(user);
-    // Send Password on Mail
-    //    asyncCalls.sendRegistrationMail(user.getFirstName(), user.getEmail(), password);
-    log.trace("Exit save method .");
+    // Add default filters
+    commonUtil.addIsEnabledFilter(filters);
+
+    // Generate Query
+    CriteriaQuery<TUser> criteriaQuery =
+        (CriteriaQuery<TUser>) commonUtil.getJpaQuery(filters, TUser.class);
+
+    // Custom OrderBy extension
+    Root<TUser> root = (Root<TUser>) criteriaQuery.getRoots().iterator().next();
+    criteriaQuery.orderBy(entityManager.getCriteriaBuilder().desc(root.get("createdDate")));
+
+    // Execute Query
+    List<TUser> userList =
+        entityManager
+            .createQuery(criteriaQuery)
+            .setFirstResult((int) pageable.getOffset())
+            .setMaxResults(pageable.getPageSize())
+            .getResultList();
+
+    // Get Total Count
+    long totalCount = commonUtil.getTotalCount(TUser.class, filters);
+
+    log.debug("Converting fetched Users to DTOs.");
+    List<TUserDTO> dtoList = userList.stream().map(userMapper::toDto).collect(Collectors.toList());
+
+    return new org.springframework.data.domain.PageImpl<>(dtoList, pageable, totalCount);
   }
 
   /**
-   * Retrieves the details of an user based on their Keycloak ID.
-   *
-   * <p>This method searches for an user using their Keycloak ID. If the user is not found, it
-   * throws an {@link EntityNotFoundException} with the message "user not found".
-   *
-   * <p>
-   *
-   * @param userId the UUID of the user as identified in Keycloak
-   * @return an {@link "UserDTO"} containing the details of the found user
-   * @throws EntityNotFoundException if no user is found with the provided Keycloak ID
+   * Registers a new user. Handles both Postgres persistence and Keycloak registration.
+   * Emits a UserUpdatedEvent for indexing in Elasticsearch.
    */
   @Override
+  public void save(TUserDTO userDTO, String clientName) {
+    log.debug("Enter save method :: userDTO [{}] :: clientName [{}]", userDTO, clientName);
+
+    if (userRepository.existsByEmail(userDTO.getEmail())) {
+      log.debug("Duplicate User found to save User Request ::  [{}]", userDTO);
+      throw new ConflictException(ErrorKeys.USER_ALREADY_EXISTS_WITH_THIS_EMAIL);
+    }
+
+    TUser user = userMapper.toEntity(userDTO);
+    log.info("user is :: [{}]", user);
+    UUID keyCloakUserId = UUID.fromString(keyCloakUtil.saveUser(userDTO, clientName, ROLE_USER));
+    log.debug("Key Cloak user id is :: [{}]", keyCloakUserId);
+    user.setKeycloakUserId(keyCloakUserId);
+    
+    // Normalize email and save
+    user.setEmail(user.getEmail().toLowerCase());
+    user = userRepository.save(user);
+    
+    // Emit synchronization event
+    syncUserToSearchService(user, ACTION_CREATE);
+
+    log.debug("Exit save method .");
+  }
+
+  /**
+   * Retrieves public user details by internal ID.
+   * Result is cached in Redis for high-frequency access.
+   */
+  @Override
+  @Cacheable(value = "users", key = "#userId")
   public TUserDTO getUserDetails(UUID userId) {
-    log.trace("Enter getUserDetails method :: [{}]", userId);
+    log.debug("Fetching user details for {} from database", userId);
     Optional<TUser> optionalUser = userRepository.findById(userId);
-    log.info("User details :: [{}]", optionalUser);
     TUser existingUser =
-        optionalUser.orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
-    log.trace("Exit getUserDetails method :: [{}]", existingUser);
+        optionalUser.orElseThrow(() -> new EntityNotFoundException(ERROR_USER_NOT_FOUND));
     return userMapper.toDto(existingUser);
   }
 
   /**
-   * Retrieves the details of an user based on their Keycloak ID.
-   *
-   * <p>This method searches for an user using their Keycloak ID. If the user is not found, it
-   * throws an {@link EntityNotFoundException} with the message "user not found".
-   *
-   * <p>
-   *
-   * @param userId the UUID of the user as identified in Keycloak
-   * @return an {@link "UserDTO"} containing the details of the found user
-   * @throws EntityNotFoundException if no user is found with the provided Keycloak ID
+   * Retrieves the user profile associated with the current authentication token.
    */
   @Override
   public TUserDTO getUserDetailsByAuthentication(Authentication authentication) {
-    log.trace("Enter getUserDetails method :: [{}]", authentication);
+    log.debug("Enter getUserDetails method :: [{}]", authentication);
 
-    // Extract authorities
-    Set<String> authorities =
-        authentication.getAuthorities().stream()
-            .map(GrantedAuthority::getAuthority)
-            .collect(Collectors.toSet());
-
-    // Retrieve user details
     TUser existingUser =
         userRepository
             .findById(UUID.fromString(authentication.getName()))
-            .orElseThrow(EntityNotFoundException::new);
+            .orElseThrow(() -> new EntityNotFoundException(ERROR_USER_NOT_FOUND));
 
-    log.info("User details :: [{}]", existingUser);
-
-    // Map user entity to DTO
-    TUserDTO tUserDTO = userMapper.toDto(existingUser);
-
-    log.trace("Exit getUserDetails method :: [{}]", tUserDTO);
-    return tUserDTO;
+    return userMapper.toDto(existingUser);
   }
 
   /**
-   * Retrieves an user by their unique identifier if they have not been marked as deleted.
-   *
-   * <p>This method performs a database search for an user using the provided UUID. It only returns
-   * the user if they are not flagged as deleted. The result is then mapped from an {@link "User"}
-   * entity to an {@link "UserDTO"} data transfer object.
-   *
-   * <p>
-   *
-   * @param id the UUID of the user to retrieve
-   * @return an {@link Optional<UserDTO>} containing the user details if found, or an empty Optional
-   *     if no matching user is found
+   * Returns a user by ID if not deleted.
    */
   @Override
   @Transactional(readOnly = true)
   public Optional<TUserDTO> findOne(UUID id) {
-    log.trace("Enter findOne method :: id [{}]", id);
+    log.debug("Enter findOne method :: id [{}]", id);
     Optional<TUser> user = userRepository.findByIdAndIsDeletedFalse(id);
-    log.trace("Exit findOne method :: user [{}]", user);
     return user.map(userMapper::toDto);
   }
 
   /**
-   * Deletes an user from both the application database and Keycloak.
-   *
-   * <p>This method first deletes the user from Keycloak using the provided client name and user ID.
-   * It then marks the user as deleted in the application database by setting the `isDeleted` flag
-   * to true. If the user with the given Keycloak ID does not exist in the database, it throws an
-   * {@link EntityNotFoundException}.
-   *
-   * <p>
-   *
-   * @param clientName the client name for the Keycloak configuration
-   * @param id the UUID of the user to be deleted
-   * @throws EntityNotFoundException if no user is found with the provided Keycloak ID
+   * Soft-deletes a user and removes them from Keycloak.
    */
   @Override
+  @CacheEvict(value = "users", key = "#id")
   public void delete(String clientName, UUID id) {
-    log.trace("Enter delete method  :: client name [{}] :: id [{}]", clientName, id);
+    log.debug("Enter delete method  :: client name [{}] :: id [{}]", clientName, id);
     TUser user =
         userRepository
             .findById(id)
-            .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND + ": " + id));
+            .orElseThrow(() -> new EntityNotFoundException(ERROR_USER_NOT_FOUND + ": " + id));
     String keyCloakId = String.valueOf(user.getKeycloakUserId());
-    Response response = keyCloakUtil.deleteUserFromKeycloak(clientName, keyCloakId);
-    log.info("delete user from key cloak :: [{}]", response);
+    keyCloakUtil.deleteUserFromKeycloak(clientName, keyCloakId);
+
+    // Sync with other services
+    syncUserToSearchService(user, ACTION_DELETE);
+
     user.setIsDeleted(true);
-    log.trace("Exit delete method :: [{}]", user);
     userRepository.save(user);
   }
 
   /**
-   * Retrieves a paginated list of all users who have not been marked as deleted.
-   *
-   * <p>This method utilizes the {@link Pageable} object to fetch a page of users from the database.
-   * It filters out any users that have been marked as deleted. The retrieved {@link Page} of {@link
-   * "User"} entities is then mapped to a {@link Page} of {@link "UserDTO"} using the {@link
-   * "UserMapper"}.
-   *
-   * <p>
-   *
-   * @param pageable the pagination information
-   * @return a {@link Page} of {@link "UserDTO"} containing user details
+   * Retrieves a paginated list of all active users.
    */
   @Override
   public Page<TUserDTO> getAllUserDetail(Pageable pageable) {
-    log.trace("Enter getAllUserDetail method .");
+    log.debug("Enter getAllUserDetail method .");
     Page<TUser> userDetails = userRepository.findAllByIsDeletedFalse(pageable);
-    log.info("User details is :: [{}]", userDetails);
-    log.trace("Exit getAllUserDetail method.");
     return userDetails.map(userMapper::toDto);
   }
 
   /**
-   * Resets the password of an user in both the application database and Keycloak.
-   *
-   * <p>This method first checks if the new password and confirm password match. If they do not
-   * match, it throws a {@link CommonExceptionHandler} with the error key {@link
-   * ErrorKeys#PASSWORD_AND_CONFIRM_PASSWORD_DO_NOT_MATCH}. It then retrieves the user by their ID.
-   * If the user is not found, it throws a {@link CommonExceptionHandler} with the error key {@link
-   * ErrorKeys#USER_NOT_FOUND}. If the user is found, it updates the user's password in Keycloak
-   * using the Keycloak ID associated with the user.
-   *
-   * @param changePasswordDTO the DTO containing the user ID, new password, and confirm password
-   * @param clientName the client name for the Keycloak configuration
-   * @throws CommonExceptionHandler if the passwords do not match or if no user is found with the
-   *     provided ID
+   * Updates user password in Keycloak. 
+   * Note: Local password storage is removed for security compliance.
    */
   @Override
   public void resetPassword(ChangePassword changePasswordDTO, String clientName) {
-    log.trace(
-        "Enter resetPassword method ::  changePasswordDTO [{}] :: clientName [{}]",
-        changePasswordDTO);
+    log.debug("Enter resetPassword method for email: {}", changePasswordDTO.getEmailId());
     String newPassword = changePasswordDTO.getNewPassword();
     String confirmPassword = changePasswordDTO.getConfirmPassword();
-    log.info("newPassword :: [{}]", newPassword);
-    log.info("confirmPassword :: [{}]", confirmPassword);
+    
     if (!newPassword.equals(confirmPassword)) {
-      log.debug(
-          "Password and ConfirmConfirm Password Doesn't match in ChangedPassword Request :: Password [{}] ,ConfirmPassword [{}] ",
-          changePasswordDTO.getNewPassword(),
-          changePasswordDTO.getConfirmPassword());
-      throw new CommonExceptionHandler(
-          ErrorKeys.PASSWORD_AND_CONFIRM_PASSWORD_DO_NOT_MATCH, HttpStatus.BAD_REQUEST.value());
+      throw new ValidationException(ErrorKeys.PASSWORD_AND_CONFIRM_PASSWORD_DO_NOT_MATCH);
     }
-    if (changePasswordDTO.getEmailId().isEmpty()) {
-      throw new CommonExceptionHandler("Email cannot be null", HttpStatus.BAD_REQUEST.value());
-    }
+    
     TUser user = userRepository.findByEmailAndIsDeletedFalse(changePasswordDTO.getEmailId());
-    log.info("Users details using id :: [{}]", user);
     if (user == null) {
-      log.debug(
-          "User Not Exist with mail: " + changePasswordDTO.getEmailId(),
-          changePasswordDTO.getEmpId());
-      throw new CommonExceptionHandler(USER_NOT_FOUND, HttpStatus.BAD_REQUEST.value());
+      throw new ResourceNotFoundException(ERROR_USER_NOT_FOUND);
     }
+
     String keycloakId = user.getKeycloakUserId().toString();
-    log.info("keycloakId :: [{}]", keycloakId);
     keyCloakUtil.updateUserPassword(keycloakId, newPassword, clientName);
-    user.setPassword(Base64.getEncoder().encodeToString(newPassword.getBytes()));
-    userRepository.save(user);
-    log.trace("Exit resetPassword method .");
+    log.debug("Exit resetPassword method .");
   }
 
   /**
-   * Updates an user's details by their unique identifier.
-   *
-   * <p>This method retrieves an existing user by their unique identifier (usrId). If the user is
-   * not found, it throws a {@link CommonExceptionHandler} with an error key {@link
-   * ErrorKeys#USER_NOT_FOUND}. It checks if the identification type and ID number combination from
-   * the provided {@link "UserDTO"} already exists in the database for another user. If it does, it
-   * throws a {@link CommonExceptionHandler} with an error key {@link
-   * ErrorKeys#"ID_NUMBER_EXISTS_ON_THIS_NIN"}.
-   *
-   * <p>If the user exists and the identification details are unique, it updates the user's details
-   * with the new values from the {@link "UserDTO"}. It also updates the role of the user by
-   * converting the {@link "RoleDTO"} to a {@link Role} entity. Finally, it saves the updated user
-   * back to the database.
-   *
-   * @param userId the UUID of the user to update
-   * @param userDTO the data transfer object containing the updated details of the user
-   * @param "clientName" the client name for the Keycloak configuration
-   * @throws CommonExceptionHandler if no user is found with the provided ID or if the
-   *     identification type and ID number combination already exists for another user
+   * Updates core user details and/or profile image.
+   * Evicts the identity cache to ensure consistency.
    */
   @Override
+  @CacheEvict(value = "users", key = "#userId")
   public void updateUserById(UUID userId, MultipartFile image, TUserDTO userDTO)
       throws IOException {
-    log.trace("Enter updateUserById method  :: userId [{}] :: userDTO [{}]", userId, userDTO);
+    log.debug("Enter updateUserById method  :: userId [{}]", userId);
     TUser existingUser =
         userRepository
             .findById(userId)
-            .orElseThrow(
-                () -> {
-                  log.debug("User Id doesn't exist :: id [{}]", userId);
-                  throw new CommonExceptionHandler(USER_NOT_FOUND, HttpStatus.BAD_REQUEST.value());
-                });
+            .orElseThrow(() -> new ResourceNotFoundException(ERROR_USER_NOT_FOUND));
+            
     existingUser.setFirstName(userDTO.getFirstName());
     existingUser.setLastName(userDTO.getLastName());
 
@@ -372,26 +304,38 @@ public class UserServiceImpl implements UserService {
     }
 
     existingUser = userRepository.save(existingUser);
+
+    // Sync updates to Elasticsearch
+    syncUserToSearchService(existingUser, ACTION_UPDATE);
+
     TUserDTO updatedUser = userMapper.toDto(existingUser);
     keyCloakUtil.updateUserDetailsInKeycloak(updatedUser, keycloakDemoClient);
-    log.trace("Exit updateUserById method .");
   }
 
-  /**
-   * Sends a password reset link to the user's email. The method checks if the user exists and, if
-   * found, generates a secure token containing the user's email and the current timestamp. It then
-   * creates a URL with the token and sends the link to the user's email using asynchronous calls.
-   *
-   * @param email The email address of the user requesting a password reset.
-   * @return The generated password reset URL.
-   * @throws Exception If the user is not found or an error occurs during token encryption or email
-   *     sending.
-   */
+  private void syncUserToSearchService(TUser user, String action) {
+    UserUpdatedEvent event =
+        UserUpdatedEvent.builder()
+            .id(user.getId())
+            .firstName(user.getFirstName())
+            .lastName(user.getLastName())
+            .email(user.getEmail())
+            .profileImageUrl(user.getProfileImageUrl())
+            .updatedAt(System.currentTimeMillis())
+            .action(action)
+            .build();
+    try {
+      kafkaTemplate.send(TOPIC_USER_UPDATED, user.getId().toString(), event);
+    } catch (Exception e) {
+      log.error("Failed to sync user {} to search service: {}", user.getId(), e.getMessage());
+    }
+  }
+
+  /** Sends a password reset link to the user's email. */
   @Override
   public String sendForgotLink(String email) throws Exception {
     TUser tUser = userRepository.findByEmailAndIsDeletedFalse(email);
     if (tUser == null) {
-      throw new CommonExceptionHandler(USER_NOT_FOUND, HttpStatus.BAD_REQUEST.value());
+      throw new ResourceNotFoundException(ERROR_USER_NOT_FOUND);
     }
     String token = CryptUtil.encrypt(email + "~" + System.currentTimeMillis());
     String url = createPasswordUrl + token;
@@ -400,24 +344,13 @@ public class UserServiceImpl implements UserService {
     return url;
   }
 
-  /**
-   * Handles the password reset process for a user based on a provided token. The token is decrypted
-   * to extract the email and timestamp. The method then checks if the token is still valid (i.e.,
-   * within 24 hours of generation). If valid, it proceeds to reset the user's password.
-   *
-   * @param token The encrypted token that contains the user's email and timestamp in the format
-   *     "email~timestamp".
-   * @param changePassword The object containing the new password details to be updated for the
-   *     user.
-   * @throws Exception If the token is invalid, expired (older than 24 hours), or the decryption
-   *     process fails.
-   */
+  /** Handles the password reset process for a user based on a provided token. */
   @Override
   public void forgotPassword(String token, ChangePassword changePassword) throws Exception {
     String decryptToken = CryptUtil.decrypt(token);
     String[] parts = decryptToken.split("~");
     if (parts.length != 2) {
-      throw new CommonExceptionHandler(INVALID_TOKEN_FORMAT, HttpStatus.BAD_REQUEST.value());
+      throw new ValidationException(INVALID_TOKEN_FORMAT);
     }
     String email = parts[0];
     long tokenTimestamp = Long.parseLong(parts[1]);
@@ -432,71 +365,35 @@ public class UserServiceImpl implements UserService {
     resetPassword(changePassword, keycloakDemoClient.clientName());
   }
 
-  String generatePassword() {
-    String allChars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_+=<>?";
-    StringBuilder password = new StringBuilder();
-
-    Random random = new Random();
-    for (int i = 0; i < 8; i++) {
-      password.append(allChars.charAt(random.nextInt(allChars.length())));
-    }
-    return password.toString();
-  }
-
-  /**
-   * Saves the uploaded image for the authenticated user.
-   *
-   * @param file the image file to be saved
-   * @param authentication the authentication object containing user details
-   * @throws IOException if an error occurs while reading the image file
-   * @throws CommonExceptionHandler if the file size exceeds the maximum limit or the file format is
-   *     invalid
-   */
+  /** Saves the uploaded image for the authenticated user. */
   @Override
   public void saveImage(MultipartFile file, Authentication authentication) throws IOException {
 
     String contentType = file.getContentType();
     long File_Size = Long.parseLong(MAX_FILE_SIZE);
     if (file.getSize() > File_Size) {
-      throw new CommonExceptionHandler(FILE_SIZE_EXCEEDED, HttpStatus.BAD_REQUEST.value());
+      throw new ValidationException(FILE_SIZE_EXCEEDED);
     } else if (contentType == null || !ALLOWED_FILE_TYPES.contains(contentType)) {
-      throw new CommonExceptionHandler(INVALID_FILE_FORMAT, HttpStatus.BAD_REQUEST.value());
+      throw new ValidationException(INVALID_FILE_FORMAT);
     }
 
     TUser user =
         userRepository
             .findByKeycloakUserId(UUID.fromString(authentication.getName()))
-            .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
+            .orElseThrow(() -> new EntityNotFoundException(ERROR_USER_NOT_FOUND));
 
     String fileName = fileStorageService.storeFile(file);
     user.setProfileImageUrl(fileName);
     userRepository.save(user);
   }
 
-  /**
-   * Retrieves the image for the authenticated user.
-   *
-   * @param authentication the authentication object containing user details
-   * @return the image data as a byte array
-   * @throws CommonExceptionHandler if the image is not found for the user
-   */
+  /** Retrieves the image for the authenticated user. */
   @Override
   public byte[] getImage(Authentication authentication) {
-    UUID userId = UUID.fromString(authentication.getName());
-    TUser user = userRepository.findById(userId).get();
-    //    if (user.getImage() == null) {
-    //      throw new CommonExceptionHandler(FILE_NOT_FOUND, HttpStatus.BAD_REQUEST.value());
-    //    }
     return null;
   }
 
-  /**
-   * Finds and returns a user by their Keycloak ID.
-   *
-   * @param keyCloakId the UUID of the user in Keycloak
-   * @return TUserDTO object representing the user's details
-   */
+  /** Finds and returns a user by their Keycloak ID. */
   @Override
   public TUserDTO findUserByKeyCloakId(UUID keyCloakId) {
     log.info("Entering findUserByKeyCloakId with keyCloakId: {}", keyCloakId);
@@ -504,5 +401,78 @@ public class UserServiceImpl implements UserService {
     TUserDTO userDTO = userMapper.toDto(user);
     log.info("Exiting findUserByKeyCloakId with result: {}", userDTO);
     return userDTO;
+  }
+
+  @Override
+  public PrivacySettingsDTO getPrivacySettings(UUID userId) {
+    PrivacySettings settings =
+        privacySettingsRepository
+            .findById(userId)
+            .orElseGet(
+                () -> {
+                  PrivacySettings defaultSettings =
+                      PrivacySettings.builder().userId(userId).build();
+                  return privacySettingsRepository.save(defaultSettings);
+                });
+
+    return PrivacySettingsDTO.builder()
+        .profileVisibility(settings.getProfileVisibility())
+        .showEmail(settings.isShowEmail())
+        .showConnections(settings.isShowConnections())
+        .allowMessagesFrom(settings.getAllowMessagesFrom())
+        .build();
+  }
+
+  @Override
+  public void updatePrivacySettings(UUID userId, PrivacySettingsDTO dto) {
+    PrivacySettings settings =
+        privacySettingsRepository
+            .findById(userId)
+            .orElseThrow(() -> new EntityNotFoundException(ERROR_USER_NOT_FOUND));
+
+    settings.setProfileVisibility(dto.getProfileVisibility());
+    settings.setShowEmail(dto.isShowEmail());
+    settings.setShowConnections(dto.isShowConnections());
+    settings.setAllowMessagesFrom(dto.getAllowMessagesFrom());
+
+    privacySettingsRepository.save(settings);
+  }
+
+  @Override
+  public void blockUser(UUID blockerId, UUID blockedId) {
+    if (blockerId.equals(blockedId)) {
+      throw new ValidationException(ERROR_CANNOT_BLOCK_SELF);
+    }
+
+    if (!userBlockRepository.existsByBlockerIdAndBlockedId(blockerId, blockedId)) {
+      UserBlock block = UserBlock.builder().blockerId(blockerId).blockedId(blockedId).build();
+      userBlockRepository.save(block);
+    }
+  }
+
+  @Override
+  public void unblockUser(UUID blockerId, UUID blockedId) {
+    userBlockRepository
+        .findByBlockerIdAndBlockedId(blockerId, blockedId)
+        .ifPresent(userBlockRepository::delete);
+  }
+
+  @Override
+  public boolean isBlocked(UUID blockerId, UUID blockedId) {
+    return userBlockRepository.existsByBlockerIdAndBlockedId(blockerId, blockedId);
+  }
+
+  @Override
+  public List<TUserDTO> getBlockedUsers(UUID blockerId) {
+    return userBlockRepository.findByBlockerId(blockerId).stream()
+        .map(
+            block -> {
+              TUser user =
+                  userRepository
+                      .findById(block.getBlockedId())
+                      .orElseThrow(() -> new EntityNotFoundException(ERROR_USER_NOT_FOUND));
+              return userMapper.toDto(user);
+            })
+        .collect(java.util.stream.Collectors.toList());
   }
 }

@@ -36,12 +36,13 @@ spring:
               - POST
               - PUT
               - DELETE
+              - PATCH
               - OPTIONS
             allowedHeaders: "*"
             allowCredentials: true
       discovery:
         locator:
-          enabled: true
+          enabled: false
           lower-case-service-id: true
 
       routes:
@@ -54,6 +55,11 @@ spring:
               args:
                 name: profileServiceCB
                 fallbackUri: forward:/fallback/profile
+                statusCodes:
+                  - INTERNAL_SERVER_ERROR
+                  - BAD_GATEWAY
+                  - SERVICE_UNAVAILABLE
+                  - GATEWAY_TIMEOUT
 
         - id: user-service
           uri: lb://user-service
@@ -64,6 +70,11 @@ spring:
               args:
                 name: userServiceCB
                 fallbackUri: forward:/fallback/user
+                statusCodes:
+                  - INTERNAL_SERVER_ERROR
+                  - BAD_GATEWAY
+                  - SERVICE_UNAVAILABLE
+                  - GATEWAY_TIMEOUT
 
         - id: notification-service
           uri: lb://notification-service
@@ -74,6 +85,11 @@ spring:
               args:
                 name: notificationServiceCB
                 fallbackUri: forward:/fallback/notification
+                statusCodes:
+                  - INTERNAL_SERVER_ERROR
+                  - BAD_GATEWAY
+                  - SERVICE_UNAVAILABLE
+                  - GATEWAY_TIMEOUT
 
         - id: job-service
           uri: lb://job-service
@@ -84,6 +100,11 @@ spring:
               args:
                 name: jobServiceCB
                 fallbackUri: forward:/fallback/job
+                statusCodes:
+                  - INTERNAL_SERVER_ERROR
+                  - BAD_GATEWAY
+                  - SERVICE_UNAVAILABLE
+                  - GATEWAY_TIMEOUT
 
         - id: chat-service
           uri: lb://chat-service
@@ -94,6 +115,26 @@ spring:
               args:
                 name: chatServiceCB
                 fallbackUri: forward:/fallback/chat
+                statusCodes:
+                  - INTERNAL_SERVER_ERROR
+                  - BAD_GATEWAY
+                  - SERVICE_UNAVAILABLE
+                  - GATEWAY_TIMEOUT
+
+        - id: search-service
+          uri: lb://search-service
+          predicates:
+            - Path=/ss/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: searchServiceCB
+                fallbackUri: forward:/fallback/search
+                statusCodes:
+                  - INTERNAL_SERVER_ERROR
+                  - BAD_GATEWAY
+                  - SERVICE_UNAVAILABLE
+                  - GATEWAY_TIMEOUT
 
         - id: chat-service-ws
           uri: lb://chat-service
@@ -103,15 +144,16 @@ spring:
         - id: notification-service-ws
           uri: lb://notification-service
           predicates:
-            - Path=/ws/**
+            - Path=/ws-notifications/**
 
 eureka:
   client:
     serviceUrl:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
   instance:
-    preferIpAddress: true
+    preferIpAddress: false
     hostname: localhost
+    instance-id: ${spring.application.name}:${server.port}
 
 management:
   endpoint:
@@ -120,7 +162,13 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,gateway,info
+        include: health,gateway,info,prometheus,metrics
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411}/api/v2/spans
 
 resilience4j:
   circuitbreaker:
@@ -134,8 +182,8 @@ resilience4j:
       userServiceCB:
         slidingWindowSize: 10
         failureRateThreshold: 50
-        waitDurationInOpenState: 10s
-        timeoutDuration: 10s
+        waitDurationInOpenState: 5s
+        timeoutDuration: 20s
       notificationServiceCB:
         slidingWindowSize: 10
         failureRateThreshold: 50
@@ -145,6 +193,10 @@ resilience4j:
         failureRateThreshold: 50
         waitDurationInOpenState: 5s
       chatServiceCB:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 5s
+      searchServiceCB:
         slidingWindowSize: 10
         failureRateThreshold: 50
         waitDurationInOpenState: 5s
@@ -154,13 +206,15 @@ resilience4j:
       profileServiceCB:
         timeoutDuration: 10s
       userServiceCB:
-        timeoutDuration: 10s
+        timeoutDuration: 30s
       notificationServiceCB:
         timeoutDuration: 3s
       jobServiceCB:
         timeoutDuration: 3s
       chatServiceCB:
         timeoutDuration: 3s
+      searchServiceCB:
+        timeoutDuration: 10s
 
 springdoc:
   enable-native-support: true

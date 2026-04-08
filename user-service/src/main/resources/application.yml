@@ -7,6 +7,18 @@ logging:
 server:
   port: ${PORT:8090}
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411}/api/v2/spans
+
 apiPrefix: /us
 
 eureka:
@@ -14,8 +26,9 @@ eureka:
     serviceUrl:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
   instance:
-    preferIpAddress: true
+    preferIpAddress: false
     hostname: localhost
+    instance-id: ${spring.application.name}:${server.port}
 
 spring:
   application:
@@ -49,11 +62,20 @@ spring:
           jws-algorithm: RS256
           issuer-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/linkedin
           jwk-set-uri: ${spring.security.oauth2.resourceserver.jwt.issuer-uri}/protocol/openid-connect/certs
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: 1
+      properties:
+        request.timeout.ms: 3000
+        delivery.timeout.ms: 5000
+        max.block.ms: 2000
 
 kafka:
   topics:
@@ -67,10 +89,9 @@ keycloak:
   url: ${KEYCLOAK_URL:http://localhost:8080}
   baseurl: ${keycloak.url}/realms/${keycloak.realm}/protocol/openid-connect/token
   user:
-    clientName: linkedin-client
+    clientName: ${KEYCLOAK_CLIENT_NAME:linkedin-client}
     clientSecret: ${KEYCLOAK_USER_CLIENT_SECRET:r2wtj8OkaTk0Si6RF6P0Gs0CmNhsdmRP}
-    clientId: 5bcbe09d-b6f2-4599-a7f4-5e4685095d6b
-
+    clientId: ${KEYCLOAK_CLIENT_UUID:5bcbe09d-b6f2-4599-a7f4-5e4685095d6b}
 openapi:
   service:
     title: user-service doc

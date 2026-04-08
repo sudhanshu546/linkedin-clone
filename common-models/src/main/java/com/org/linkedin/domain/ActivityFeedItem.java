@@ -5,14 +5,19 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
-@Table(name = "activity_feed_item")
-@Getter
-@Setter
+@Table(
+    name = "activity_feed_item",
+    indexes = {
+        @Index(name = "idx_feed_user_priority_ts", columnList = "user_id, priority DESC, timestamp DESC"),
+        @Index(name = "idx_feed_user_ts", columnList = "user_id, timestamp DESC")
+    })
+@Data
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class ActivityFeedItem extends AbstractAuditingEntity<UUID> implements Serializable {
 
   @Id
@@ -50,4 +55,13 @@ public class ActivityFeedItem extends AbstractAuditingEntity<UUID> implements Se
 
   @Column(name = "timestamp")
   private LocalDateTime timestamp;
+
+  @Column(name = "priority")
+  private Double priority;
+
+  @ElementCollection
+  @MapKeyColumn(name = "metadata_key")
+  @Column(name = "metadata_value")
+  @CollectionTable(name = "feed_item_metadata", joinColumns = @JoinColumn(name = "feed_item_id"))
+  private java.util.Map<String, String> metadata;
 }

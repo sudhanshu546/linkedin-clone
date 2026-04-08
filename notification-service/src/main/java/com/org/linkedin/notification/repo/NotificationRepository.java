@@ -8,9 +8,9 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
-  List<Notification> findByRecipientIdOrderByCreatedAtDesc(UUID recipientId);
+  List<Notification> findByRecipientIdOrderByCreatedDateDesc(UUID recipientId);
 
-  List<Notification> findByRecipientIdAndIsReadFalseOrderByCreatedAtDesc(UUID recipientId);
+  List<Notification> findByRecipientIdAndIsReadFalseOrderByCreatedDateDesc(UUID recipientId);
 
   long countByRecipientIdAndIsReadFalse(UUID recipientId);
 
