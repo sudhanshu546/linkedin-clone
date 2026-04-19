@@ -1,11 +1,14 @@
 package com.org.linkedin.search.consumer;
 
 import com.org.linkedin.dto.event.JobUpdatedEvent;
+import com.org.linkedin.dto.event.PostCreatedEvent;
 import com.org.linkedin.dto.event.PostDeletedEvent;
 import com.org.linkedin.dto.event.UserUpdatedEvent;
 import com.org.linkedin.search.document.JobDocument;
+import com.org.linkedin.search.document.PostDocument;
 import com.org.linkedin.search.document.UserDocument;
 import com.org.linkedin.search.repository.JobRepository;
+import com.org.linkedin.search.repository.PostRepository;
 import com.org.linkedin.search.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +25,7 @@ public class SearchConsumer {
 
     private final UserRepository userRepository;
     private final JobRepository jobRepository;
+    private final PostRepository postRepository;
     private final com.org.linkedin.search.repository.HashtagRepository hashtagRepository;
 
     @KafkaListener(topics = TOPIC_POST_HASHTAGS, groupId = GROUP_SEARCH)
@@ -39,12 +43,30 @@ public class SearchConsumer {
         }
     }
 
+    @KafkaListener(topics = "post-created", groupId = GROUP_SEARCH)
+    public void consumePostCreated(@Payload PostCreatedEvent event) {
+        log.info("Received PostCreatedEvent: {}", event.getPostId());
+        PostDocument doc = PostDocument.builder()
+                .id(event.getPostId())
+                .authorId(event.getUserId())
+                .authorName(event.getUserName())
+                .userProfileImageUrl(event.getUserProfileImageUrl())
+                .content(event.getContent())
+                .imageUrl(event.getImageUrl())
+                .imageUrls(event.getImageUrls())
+                .isPoll(event.isPoll())
+                .pollQuestion(event.getPollQuestion())
+                .pollOptions(event.getPollOptions())
+                .build();
+        postRepository.save(doc);
+        log.info("Indexed post document: {}", doc.getId());
+    }
+
     @KafkaListener(topics = "post-deleted", groupId = GROUP_SEARCH)
     public void consumePostDeleted(@Payload PostDeletedEvent event) {
         log.info("Received PostDeletedEvent: {}", event);
-        // If you were indexing posts, you'd delete them here.
-        // For now, we don't have a PostDocument, but we could clean up hashtags associated with it
-        // if we tracked post-to-hashtag mapping.
+        postRepository.deleteById(event.getPostId());
+        log.info("Deleted post document: {}", event.getPostId());
     }
 
     @KafkaListener(topics = TOPIC_USER_UPDATED, groupId = GROUP_SEARCH)

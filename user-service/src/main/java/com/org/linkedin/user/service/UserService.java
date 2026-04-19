@@ -56,4 +56,8 @@ public interface UserService {
   boolean isBlocked(UUID blockerId, UUID blockedId);
 
   List<TUserDTO> getBlockedUsers(UUID blockerId);
+
+  List<TUserDTO> getUsersByIds(List<UUID> userIds);
+
+  void syncAllUsersToSearch();
 }

@@ -7,6 +7,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
 
 @Entity
 @Table(
@@ -16,12 +18,18 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@SQLDelete(sql = "UPDATE post_comments SET is_deleted = true WHERE id = ?")
+@Where(clause = "is_deleted = false OR is_deleted IS NULL")
 public class Comment extends AbstractAuditingEntity<UUID> {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
 
-  @Column(name = "post_id", nullable = false)
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "post_id", nullable = false)
+  private Post post;
+
+  @Column(name = "post_id", insertable = false, updatable = false)
   private UUID postId;
 
   @Column(name = "parent_id")
@@ -35,6 +43,9 @@ public class Comment extends AbstractAuditingEntity<UUID> {
 
   @Column(name = "user_designation")
   private String userDesignation;
+
+  @Column(name = "user_profile_image_url")
+  private String userProfileImageUrl;
 
   @Column(columnDefinition = "TEXT", nullable = false)
   private String content;

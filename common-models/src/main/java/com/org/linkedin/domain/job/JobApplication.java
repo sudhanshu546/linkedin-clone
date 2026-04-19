@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import java.util.UUID;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
 
 @Entity
 @Table(name = "job_applications")
@@ -12,6 +14,8 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@SQLDelete(sql = "UPDATE job_applications SET is_deleted = true WHERE id = ?")
+@Where(clause = "is_deleted = false OR is_deleted IS NULL")
 public class JobApplication extends AbstractAuditingEntity<UUID> {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
@@ -31,4 +35,10 @@ public class JobApplication extends AbstractAuditingEntity<UUID> {
 
   @Column(name = "cover_letter", length = 2000)
   private String coverLetter;
+
+  @Column(name = "interview_date")
+  private String interviewDate;
+
+  @Column(name = "interview_link")
+  private String interviewLink;
 }

@@ -25,9 +25,25 @@ public class ActivityFeedItemDTO {
   // Actor details for LinkedIn-like display
   private String actorName;
   private String actorDesignation;
+  private String actorAvatar;
   private String actorProfileId; // Keycloak ID for linking
-  private boolean isLikedByCurrentUser;
+
+  @com.fasterxml.jackson.annotation.JsonProperty("likedByCurrentUser")
+  private boolean likedByCurrentUser;
+
   private String userReaction;
   private long reactionCount;
   private long commentCount;
+
+  // Poll Details
+  @com.fasterxml.jackson.annotation.JsonProperty("isPoll")
+  private boolean isPoll;
+
+  private String pollQuestion;
+  private java.util.List<com.org.linkedin.dto.poll.PollOptionDTO> pollOptions;
+
+  @com.fasterxml.jackson.annotation.JsonProperty("hasVoted")
+  private boolean hasVoted;
+
+  private UUID selectedOptionId;
 }

@@ -1,3 +1,10 @@
+logging:
+  level:
+    org.springframework.web: DEBUG
+    org.apache.kafka: WARN
+    org.springframework.kafka: WARN
+    com.org.linkedin: DEBUG
+
 server:
   port: 8081
 
@@ -56,6 +63,17 @@ spring:
         request.timeout.ms: 3000
         delivery.timeout.ms: 5000
         max.block.ms: 2000
+    consumer:
+      group-id: job-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.org.linkedin.dto.event"
+
+kafka:
+  topics:
+    user-deleted: user-deleted
 
 openapi:
   service:

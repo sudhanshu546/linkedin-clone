@@ -1,6 +1,7 @@
 package com.org.linkedin.profile.service.impl;
 
 import static com.org.linkedin.utility.ProjectConstants.TOPIC_USER_UPDATED;
+
 import com.org.linkedin.domain.Profile;
 import com.org.linkedin.domain.ProfileSkill;
 import com.org.linkedin.domain.Recommendation;
@@ -22,7 +23,6 @@ import com.org.linkedin.utility.storage.FileStorageService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -32,10 +32,10 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -67,8 +67,8 @@ public class ProfileServiceImpl implements ProfileService {
   private String profileViewedTopic;
 
   /**
-   * Retrieves a professional profile by User UUID.
-   * Caches the result in Redis to minimize database load.
+   * Retrieves a professional profile by User UUID. Caches the result in Redis to minimize database
+   * load.
    *
    * @param userId The unique identifier of the user.
    * @return The ProfileDTO containing professional details.
@@ -101,14 +101,14 @@ public class ProfileServiceImpl implements ProfileService {
       } catch (Exception e) {
         log.error("Failed to publish profile view event: {}", e.getMessage());
       }
-      }
+    }
 
-      return profileMapper.toDto(profile);
+    return profileMapper.toDto(profile);
   }
 
   /**
-   * Updates or creates a professional profile.
-   * Evicts the cached profile entry to ensure consistency on next read.
+   * Updates or creates a professional profile. Evicts the cached profile entry to ensure
+   * consistency on next read.
    */
   @Override
   @CacheEvict(value = "profiles", key = "#userId")
@@ -154,14 +154,13 @@ public class ProfileServiceImpl implements ProfileService {
   }
 
   /**
-   * Adds a skill to a user's professional profile.
-   * Evicts the profile cache to reflect the updated skills list.
+   * Adds a skill to a user's professional profile. Evicts the profile cache to reflect the updated
+   * skills list.
    */
   @Override
   @Transactional
   @CacheEvict(value = "profiles", key = "#userId")
-  public ProfileSkillDTO addSkill(
-      UUID userId, String skillName, String category) {
+  public ProfileSkillDTO addSkill(UUID userId, String skillName, String category) {
     TUserDTO tUserDTO = userService.getUserByKeyCloakId(userId).getBody().getData();
     Profile profile = profileRepo.findByUserId(tUserDTO.getId());
     if (profile == null) throw new RuntimeException("Profile not found");
@@ -172,10 +171,7 @@ public class ProfileServiceImpl implements ProfileService {
             .orElseGet(
                 () ->
                     skillRepository.save(
-                        Skill.builder()
-                            .name(skillName)
-                            .category(category)
-                            .build()));
+                        Skill.builder().name(skillName).category(category).build()));
 
     ProfileSkill profileSkill =
         profileSkillRepository
@@ -183,10 +179,7 @@ public class ProfileServiceImpl implements ProfileService {
             .orElseGet(
                 () ->
                     profileSkillRepository.save(
-                        ProfileSkill.builder()
-                            .profile(profile)
-                            .skill(skill)
-                            .build()));
+                        ProfileSkill.builder().profile(profile).skill(skill).build()));
 
     syncSkillsString(profile);
     return profileMapper.toDto(profileSkill);
@@ -219,8 +212,7 @@ public class ProfileServiceImpl implements ProfileService {
   }
 
   private void syncSkillsString(Profile profile) {
-    List<ProfileSkill> skills =
-        profileSkillRepository.findByProfileId(profile.getId());
+    List<ProfileSkill> skills = profileSkillRepository.findByProfileId(profile.getId());
     String skillsString =
         skills.stream().map(ps -> ps.getSkill().getName()).collect(Collectors.joining(", "));
     profile.setSkills(skillsString);
@@ -250,8 +242,7 @@ public class ProfileServiceImpl implements ProfileService {
 
   // Recommendations Implementation
   @Override
-  public RecommendationDTO requestRecommendation(
-      UUID requesterId, UUID authorId, String message) {
+  public RecommendationDTO requestRecommendation(UUID requesterId, UUID authorId, String message) {
     TUserDTO authorDTO = userService.getUserByKeyCloakId(authorId).getBody().getData();
     TUserDTO requesterDTO = userService.getUserByKeyCloakId(requesterId).getBody().getData();
     Profile requesterProfile = profileRepo.findByUserId(requesterDTO.getId());
@@ -323,35 +314,39 @@ public class ProfileServiceImpl implements ProfileService {
       String headline,
       String sortBy,
       String sortOrder) {
-    List<Profile> results = profileRepo.searchProfiles(query, city, state, company, headline, sortBy);
+    List<Profile> results =
+        profileRepo.searchProfiles(query, city, state, company, headline, sortBy);
     return profileMapper.toDto(results);
   }
 
   @Override
   public List<ProfileDTO> advancedSearch(AdvanceSearchCriteria criteria) {
     log.debug("Entering advancedSearch for Profiles");
-    
+
     if (criteria == null) {
-        criteria = new AdvanceSearchCriteria();
-        criteria.setPageNumber(0);
-        criteria.setPageSize(20);
-        criteria.setFilters(new ArrayList<>());
+      criteria = new AdvanceSearchCriteria();
+      criteria.setPageNumber(0);
+      criteria.setPageSize(20);
+      criteria.setFilters(new ArrayList<>());
     }
-    
+
     List<AdvanceSearchCriteria.Filter> filters = criteria.getFilters();
     if (filters == null) {
-        filters = new ArrayList<>();
-        criteria.setFilters(filters);
+      filters = new ArrayList<>();
+      criteria.setFilters(filters);
     }
-    
+
     commonUtil.addIsEnabledFilter(filters);
 
-    CriteriaQuery<Profile> criteriaQuery = (CriteriaQuery<Profile>) commonUtil.getJpaQuery(filters, Profile.class);
-    
-    List<Profile> results = entityManager.createQuery(criteriaQuery)
-        .setFirstResult(criteria.getPageNumber() * criteria.getPageSize())
-        .setMaxResults(criteria.getPageSize())
-        .getResultList();
+    CriteriaQuery<Profile> criteriaQuery =
+        (CriteriaQuery<Profile>) commonUtil.getJpaQuery(filters, Profile.class);
+
+    List<Profile> results =
+        entityManager
+            .createQuery(criteriaQuery)
+            .setFirstResult(criteria.getPageNumber() * criteria.getPageSize())
+            .setMaxResults(criteria.getPageSize())
+            .getResultList();
     return profileMapper.toDto(results);
   }
 

@@ -11,5 +11,6 @@ public class CommentCreatedEvent implements Serializable {
   private String userId;
   private String userName;
   private String userDesignation;
+  private String userProfileImageUrl;
   private String content;
 }

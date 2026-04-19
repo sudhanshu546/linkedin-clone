@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import java.util.UUID;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
 
 @Entity
 @Table(
@@ -14,6 +16,8 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@SQLDelete(sql = "UPDATE notification SET is_deleted = true WHERE id = ?")
+@Where(clause = "is_deleted = false OR is_deleted IS NULL")
 public class Notification extends AbstractAuditingEntity<UUID> {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)

@@ -35,6 +35,12 @@ public class KeyCloakAdminController {
 
   private final KeyCloakAdminService keyCloakAdminService;
 
+  /**
+   * Creates a new role in Keycloak.
+   *
+   * @param requestedRole The RoleDTO containing the details of the role to be created.
+   * @return A ResponseEntity containing an ApiResponse with the created RoleDTO.
+   */
   //  @PreAuthorize("hasRole('SystemAdmin')")
   @PostMapping("/role")
   public ResponseEntity<ApiResponse<RoleDTO>> save(@RequestBody @Valid RoleDTO requestedRole) {
@@ -43,6 +49,12 @@ public class KeyCloakAdminController {
     return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Success", role));
   }
 
+  /**
+   * Retrieves a paginated list of all roles from Keycloak.
+   *
+   * @param pageable Pagination and sorting information.
+   * @return A ResponseEntity containing an ApiResponse with a paginated list of RoleDTOs.
+   */
   @PreAuthorize("hasRole('SystemAdmin') or hasRole('Tenant')")
   @GetMapping("/role")
   public ResponseEntity<ApiResponse<List<RoleDTO>>> getAllRoles(Pageable pageable) {
@@ -62,6 +74,12 @@ public class KeyCloakAdminController {
                 roles.getTotalElements()));
   }
 
+  /**
+   * Retrieves a specific role by its unique identifier.
+   *
+   * @param roleId The unique identifier of the role to retrieve.
+   * @return A ResponseEntity containing an ApiResponse with the requested RoleDTO.
+   */
   @PreAuthorize("hasRole('SystemAdmin') or hasRole('Tenant')")
   @GetMapping("/role/{id}")
   public ResponseEntity<ApiResponse<RoleDTO>> getRoleById(@PathVariable("id") UUID roleId) {
@@ -70,6 +88,14 @@ public class KeyCloakAdminController {
     return ResponseEntity.ok(ApiResponse.success("Success", role));
   }
 
+  /**
+   * Assigns a specific role to a user in Keycloak.
+   *
+   * @param roleId The unique identifier of the role to assign.
+   * @param userId The unique identifier of the user (Keycloak user ID) to whom the role is
+   *     assigned.
+   * @return A ResponseEntity containing an ApiResponse indicating success with no data.
+   */
   @PreAuthorize("hasRole('SystemAdmin')")
   @PostMapping("/assignRole")
   public ResponseEntity<ApiResponse<Void>> assignRoleToUser(
@@ -79,6 +105,12 @@ public class KeyCloakAdminController {
     return ResponseEntity.ok(ApiResponse.success("ROLE_ASSIGNED_SUCCESSFULLY", null));
   }
 
+  /**
+   * Deletes a specific role from Keycloak.
+   *
+   * @param roleId The unique identifier of the role to delete.
+   * @return A ResponseEntity containing an ApiResponse indicating success with no data.
+   */
   @PreAuthorize("hasRole('SystemAdmin')")
   @DeleteMapping("/role/{id}")
   public ResponseEntity<ApiResponse<Void>> deleteRole(@PathVariable("id") UUID roleId) {
@@ -87,6 +119,13 @@ public class KeyCloakAdminController {
     return ResponseEntity.ok(ApiResponse.success(Constants.OPERATION_SUCCESSFUL, null));
   }
 
+  /**
+   * Updates an existing role's details in Keycloak.
+   *
+   * @param roleId The unique identifier of the role to update.
+   * @param requestedRole The RoleDTO containing the updated details.
+   * @return A ResponseEntity containing an ApiResponse with the updated RoleDTO.
+   */
   @PreAuthorize("hasRole('SystemAdmin')")
   @PutMapping("/role/{id}")
   public ResponseEntity<ApiResponse<RoleDTO>> updateRole(

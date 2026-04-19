@@ -16,11 +16,15 @@ import lombok.experimental.FieldDefaults;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
 
 /** A TUser. */
 @Entity
 @Table(name = "t_user")
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+@SQLDelete(sql = "UPDATE t_user SET is_deleted = true WHERE id = ?")
+@Where(clause = "is_deleted = false OR is_deleted IS NULL")
 @Getter
 @Setter
 @SuperBuilder

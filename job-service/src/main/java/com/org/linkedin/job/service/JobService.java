@@ -39,5 +39,11 @@ public interface JobService {
 
   List<JobApplicationDTO> getJobApplicants(UUID jobId, String status);
 
-  JobApplicationDTO updateApplicationStatus(Authentication authentication, UUID jobId, UUID applicantId, String status);
+  JobApplicationDTO updateApplicationStatus(
+      Authentication authentication,
+      UUID jobId,
+      UUID applicantId,
+      String status,
+      String interviewDate,
+      String interviewLink);
 }

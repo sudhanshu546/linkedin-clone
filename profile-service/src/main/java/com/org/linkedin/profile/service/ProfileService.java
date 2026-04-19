@@ -4,11 +4,10 @@ import com.org.linkedin.dto.ProfileDTO;
 import com.org.linkedin.dto.ProfileSkillDTO;
 import com.org.linkedin.dto.RecommendationDTO;
 import com.org.linkedin.utility.service.AdvanceSearchCriteria;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface ProfileService {
   ProfileDTO getByUserId(UUID userId);
@@ -26,8 +25,7 @@ public interface ProfileService {
 
   List<ProfileDTO> advancedSearch(AdvanceSearchCriteria criteria);
 
-  String updateCoverImage(UUID userId, MultipartFile image)
-      throws IOException;
+  String updateCoverImage(UUID userId, MultipartFile image) throws IOException;
 
   // Skills
   ProfileSkillDTO addSkill(UUID userId, String skillName, String category);
@@ -37,11 +35,9 @@ public interface ProfileService {
   void endorseSkill(UUID endorserId, UUID profileSkillId);
 
   // Recommendations
-  RecommendationDTO requestRecommendation(
-      UUID requesterId, UUID authorId, String message);
+  RecommendationDTO requestRecommendation(UUID requesterId, UUID authorId, String message);
 
-  RecommendationDTO submitRecommendation(
-      UUID authorId, UUID recommendationId, String content);
+  RecommendationDTO submitRecommendation(UUID authorId, UUID recommendationId, String content);
 
   void updateRecommendationStatus(UUID userId, UUID recommendationId, String status);
 

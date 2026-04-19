@@ -13,7 +13,7 @@ public interface ReactionRepository extends JpaRepository<Reaction, UUID> {
   long countByPostId(UUID postId);
 
   java.util.List<Reaction> findByPostIdIn(java.util.Collection<UUID> postIds);
-  
+
   java.util.List<Reaction> findByPostIdInAndUserId(java.util.Collection<UUID> postIds, UUID userId);
 
   void deleteByPostId(UUID postId);

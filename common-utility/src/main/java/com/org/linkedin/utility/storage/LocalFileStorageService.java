@@ -37,8 +37,8 @@ public class LocalFileStorageService implements FileStorageService {
     } else {
       Files.copy(file.getInputStream(), targetPath);
     }
-    
-    return filename; 
+
+    return filename;
   }
 
   @Override

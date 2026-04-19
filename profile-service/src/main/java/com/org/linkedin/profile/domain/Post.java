@@ -23,6 +23,9 @@ public class Post extends AbstractAuditingEntity<UUID> {
   @Column(name = "author_id", nullable = false)
   private UUID authorId;
 
+  @Column(name = "user_profile_image_url")
+  private String userProfileImageUrl;
+
   @Column(name = "content", length = 5000)
   private String content;
 
@@ -39,6 +42,12 @@ public class Post extends AbstractAuditingEntity<UUID> {
 
   @Column(name = "comments_disabled")
   private boolean commentsDisabled;
+
+  @Column(name = "reaction_count")
+  private long reactionCount;
+
+  @Column(name = "comment_count")
+  private long commentCount;
 
   @Override
   public UUID getId() {

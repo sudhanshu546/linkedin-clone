@@ -1,5 +1,12 @@
+logging:
+  level:
+    org.springframework.web: DEBUG
+    org.apache.kafka: WARN
+    org.springframework.kafka: WARN
+    com.org.linkedin: DEBUG
+
 server:
-  port: 8086
+  port: 8085
 
 management:
   endpoints:
@@ -38,6 +45,17 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: chat-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
+kafka:
+  topics:
+    user-deleted: user-deleted
 
 eureka:
   client:

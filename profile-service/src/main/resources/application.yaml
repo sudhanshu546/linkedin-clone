@@ -1,3 +1,10 @@
+logging:
+  level:
+    org.springframework.web: DEBUG
+    org.apache.kafka: WARN
+    org.springframework.kafka: WARN
+    com.org.linkedin: DEBUG
+
 server:
   port: 8700
 
@@ -33,6 +40,10 @@ openapi:
 spring:
   application:
     name: profile-service
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
   main:
     allow-bean-definition-overriding: true
   resources:
@@ -42,7 +53,7 @@ spring:
   jpa:
     hibernate:
       dialect: org.hibernate.dialect.PostgreSQLDialect
-      ddl-auto: update
+      ddl-auto: create
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
     url: ${DB_URI:jdbc:postgresql://localhost:5432/profile_service_db}
@@ -93,6 +104,32 @@ aws:
     bucket: ${AWS_S3_BUCKET:linkedin-uploads}
     public-url: ${AWS_S3_PUBLIC_URL:http://localhost:9000}
 
+resilience4j:
+  circuitbreaker:
+    instances:
+      userService:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+      notificationService:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+  timelimiter:
+    instances:
+      userService:
+        timeoutDuration: 10s
+      notificationService:
+        timeoutDuration: 5s
+
 kafka:
   topics:
     post-created: post-created
@@ -101,3 +138,4 @@ kafka:
     profile-viewed: profile-viewed
     connection-requested: connection-requested
     connection-accepted: connection-accepted
+    user-deleted: user-deleted

@@ -1,6 +1,7 @@
 package com.org.linkedin.search.service;
 
 import com.org.linkedin.search.document.JobDocument;
+import com.org.linkedin.search.document.PostDocument;
 import com.org.linkedin.search.document.UserDocument;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
@@ -58,6 +59,24 @@ public class SearchService {
                 .build();
 
         SearchHits<JobDocument> searchHits = elasticsearchOperations.search(query, JobDocument.class);
+        return searchHits.getSearchHits().stream()
+                .map(SearchHit::getContent)
+                .collect(Collectors.toList());
+    }
+
+    public List<PostDocument> searchPosts(String queryText, int page, int size) {
+        Query query = NativeQuery.builder()
+                .withQuery(q -> q
+                    .multiMatch(m -> m
+                        .fields("content", "authorName", "pollQuestion")
+                        .query(queryText)
+                        .fuzziness("AUTO")
+                    )
+                )
+                .withPageable(PageRequest.of(page, size))
+                .build();
+
+        SearchHits<PostDocument> searchHits = elasticsearchOperations.search(query, PostDocument.class);
         return searchHits.getSearchHits().stream()
                 .map(SearchHit::getContent)
                 .collect(Collectors.toList());

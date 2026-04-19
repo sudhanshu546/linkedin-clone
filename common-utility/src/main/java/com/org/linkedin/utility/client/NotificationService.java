@@ -10,7 +10,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient(name = "notification-service/ns/")
+@FeignClient(
+    name = "notification-service",
+    path = "/ns",
+    fallback = NotificationServiceFallback.class)
 public interface NotificationService {
   @GetMapping("/notification/{key}")
   public ResponseEntity<ApiResponse<NotificationDTO>> getNotificationByKey(

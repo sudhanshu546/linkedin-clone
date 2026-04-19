@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: user-service-test
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  kafka:
+    consumer:
+      auto-offset-reset: earliest
+      group-id: user-service-test-group
+
+eureka:
+  client:
+    enabled: false
+
+keycloak:
+  enabled: false
+
+keycloak-admin:
+  server-url: http://localhost:8080
+  realm: master
+  client-id: admin-cli
+  username: admin
+  password: admin
+
+aws:
+  s3:
+    bucket-name: test-bucket
+    region: us-east-1
+    access-key: test
+    secret-key: test

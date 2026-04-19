@@ -19,5 +19,9 @@ public interface ConnectionService {
 
   List<UUID> findMutualConnections(UUID userId);
 
+  List<UUID> findMutualConnections(Authentication authentication, UUID otherUserId);
+
+  List<com.org.linkedin.dto.user.TUserDTO> getNetworkSuggestions(Authentication authentication);
+
   UserConnectionStatusDTO getConnectionStatus(Authentication authentication, UUID otherUserId);
 }

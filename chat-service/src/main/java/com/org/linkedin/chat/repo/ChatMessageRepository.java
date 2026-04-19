@@ -19,4 +19,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
   @Query(
       "UPDATE ChatMessage m SET m.isRead = true WHERE m.recipientId = :recipientId AND m.senderId = :senderId AND m.isRead = false")
   void markMessagesAsRead(UUID recipientId, UUID senderId);
+
+  List<ChatMessage> findBySenderId(UUID senderId);
+
+  List<ChatMessage> findByRecipientId(UUID recipientId);
 }

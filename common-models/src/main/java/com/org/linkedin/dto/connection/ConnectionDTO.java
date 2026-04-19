@@ -16,4 +16,13 @@ public class ConnectionDTO {
   private UUID receiverId;
   private String status;
   private Long createdDate;
+
+  // Enriched Profile Details
+  private String requesterName;
+  private String requesterAvatar;
+  private String requesterDesignation;
+
+  private String receiverName;
+  private String receiverAvatar;
+  private String receiverDesignation;
 }

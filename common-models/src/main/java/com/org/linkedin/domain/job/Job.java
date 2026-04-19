@@ -5,18 +5,22 @@ import jakarta.persistence.*;
 import java.util.UUID;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
 
 @Entity
 @Table(
     name = "jobs",
     indexes = {
-        @Index(name = "idx_jobs_posted_by", columnList = "posted_by"),
-        @Index(name = "idx_jobs_location_type", columnList = "location, job_type")
+      @Index(name = "idx_jobs_posted_by", columnList = "posted_by"),
+      @Index(name = "idx_jobs_location_type", columnList = "location, job_type")
     })
 @Data
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@SQLDelete(sql = "UPDATE jobs SET is_deleted = true WHERE id = ?")
+@Where(clause = "is_deleted = false OR is_deleted IS NULL")
 public class Job extends AbstractAuditingEntity<UUID> {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)

@@ -30,6 +30,15 @@ public class KafkaTopicConfig {
   @Value("${kafka.topics.post-hashtags:post-hashtags}")
   private String postHashtagsTopic;
 
+  @Value("${kafka.topics.comment-deleted:comment-deleted}")
+  private String commentDeletedTopic;
+
+  @Value("${kafka.topics.post-deleted:post-deleted}")
+  private String postDeletedTopic;
+
+  @Value("${kafka.topics.post-unreacted:post-unreacted}")
+  private String postUnreactedTopic;
+
   @Bean
   public NewTopic postCreatedTopic() {
     return TopicBuilder.name(postCreatedTopic).partitions(3).replicas(1).build();
@@ -63,5 +72,20 @@ public class KafkaTopicConfig {
   @Bean
   public NewTopic postHashtagsTopic() {
     return TopicBuilder.name(postHashtagsTopic).partitions(3).replicas(1).build();
+  }
+
+  @Bean
+  public NewTopic commentDeletedTopic() {
+    return TopicBuilder.name(commentDeletedTopic).partitions(3).replicas(1).build();
+  }
+
+  @Bean
+  public NewTopic postDeletedTopic() {
+    return TopicBuilder.name(postDeletedTopic).partitions(3).replicas(1).build();
+  }
+
+  @Bean
+  public NewTopic postUnreactedTopic() {
+    return TopicBuilder.name(postUnreactedTopic).partitions(3).replicas(1).build();
   }
 }

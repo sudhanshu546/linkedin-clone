@@ -11,8 +11,10 @@ import lombok.experimental.SuperBuilder;
 @Table(
     name = "activity_feed_item",
     indexes = {
-        @Index(name = "idx_feed_user_priority_ts", columnList = "user_id, priority DESC, timestamp DESC"),
-        @Index(name = "idx_feed_user_ts", columnList = "user_id, timestamp DESC")
+      @Index(
+          name = "idx_feed_user_priority_ts",
+          columnList = "user_id, priority DESC, timestamp DESC"),
+      @Index(name = "idx_feed_user_ts", columnList = "user_id, timestamp DESC")
     })
 @Data
 @SuperBuilder
@@ -35,6 +37,9 @@ public class ActivityFeedItem extends AbstractAuditingEntity<UUID> implements Se
 
   @Column(name = "actor_designation")
   private String actorDesignation;
+
+  @Column(name = "actor_avatar")
+  private String actorAvatar;
 
   @Column(name = "post_id")
   private UUID postId;

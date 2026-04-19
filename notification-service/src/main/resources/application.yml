@@ -1,3 +1,10 @@
+logging:
+  level:
+    org.springframework.web: DEBUG
+    org.apache.kafka: WARN
+    org.springframework.kafka: WARN
+    com.org.linkedin: DEBUG
+
 server:
   port: ${PORT:9095}
 
@@ -67,3 +74,4 @@ kafka:
     profile-viewed: profile-viewed
     job-application-status-updated: job-application-status-updated
     user-mentioned: user-mentioned
+    user-deleted: user-deleted

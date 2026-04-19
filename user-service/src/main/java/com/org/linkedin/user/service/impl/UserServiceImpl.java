@@ -6,6 +6,7 @@ import static com.org.linkedin.utility.errors.ErrorKeys.INVALID_FILE_FORMAT;
 import static com.org.linkedin.utility.errors.ErrorKeys.INVALID_TOKEN_FORMAT;
 
 import com.org.linkedin.domain.user.TUser;
+import com.org.linkedin.dto.event.UserDeletedEvent;
 import com.org.linkedin.dto.event.UserUpdatedEvent;
 import com.org.linkedin.dto.user.ChangePassword;
 import com.org.linkedin.dto.user.PrivacySettingsDTO;
@@ -31,13 +32,14 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
-import jakarta.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -48,14 +50,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.http.MediaType;
-
 /**
- * Implementation of UserService responsible for user account lifecycle, 
- * identity synchronization with Keycloak, and user discovery.
- * Uses Redis caching to provide high performance for identity lookups.
+ * Implementation of UserService responsible for user account lifecycle, identity synchronization
+ * with Keycloak, and user discovery. Uses Redis caching to provide high performance for identity
+ * lookups.
  */
 @Service
 @Transactional
@@ -95,9 +93,10 @@ public class UserServiceImpl implements UserService {
 
   private final KafkaTemplate<String, Object> kafkaTemplate;
 
-  /**
-   * Search for users by keyword (first name or last name).
-   */
+  @Value("${kafka.topics.user-deleted:user-deleted}")
+  private String userDeletedTopic;
+
+  /** Search for users by keyword (first name or last name). */
   @Override
   public List<TUserDTO> searchUsers(String query) {
     log.debug("Enter searchUsers method :: query [{}]", query);
@@ -108,9 +107,7 @@ public class UserServiceImpl implements UserService {
     return users.stream().map(userMapper::toDto).collect(Collectors.toList());
   }
 
-  /**
-   * Performs complex multi-field search based on dynamic criteria.
-   */
+  /** Performs complex multi-field search based on dynamic criteria. */
   @Override
   public Page<TUserDTO> advancedSearch(AdvanceSearchCriteria criteria) {
     log.debug("Entering advancedSearch for Users");
@@ -158,8 +155,8 @@ public class UserServiceImpl implements UserService {
   }
 
   /**
-   * Registers a new user. Handles both Postgres persistence and Keycloak registration.
-   * Emits a UserUpdatedEvent for indexing in Elasticsearch.
+   * Registers a new user. Handles both Postgres persistence and Keycloak registration. Emits a
+   * UserUpdatedEvent for indexing in Elasticsearch.
    */
   @Override
   public void save(TUserDTO userDTO, String clientName) {
@@ -175,11 +172,11 @@ public class UserServiceImpl implements UserService {
     UUID keyCloakUserId = UUID.fromString(keyCloakUtil.saveUser(userDTO, clientName, ROLE_USER));
     log.debug("Key Cloak user id is :: [{}]", keyCloakUserId);
     user.setKeycloakUserId(keyCloakUserId);
-    
+
     // Normalize email and save
     user.setEmail(user.getEmail().toLowerCase());
     user = userRepository.save(user);
-    
+
     // Emit synchronization event
     syncUserToSearchService(user, ACTION_CREATE);
 
@@ -187,8 +184,8 @@ public class UserServiceImpl implements UserService {
   }
 
   /**
-   * Retrieves public user details by internal ID.
-   * Result is cached in Redis for high-frequency access.
+   * Retrieves public user details by internal ID. Result is cached in Redis for high-frequency
+   * access.
    */
   @Override
   @Cacheable(value = "users", key = "#userId")
@@ -200,9 +197,7 @@ public class UserServiceImpl implements UserService {
     return userMapper.toDto(existingUser);
   }
 
-  /**
-   * Retrieves the user profile associated with the current authentication token.
-   */
+  /** Retrieves the user profile associated with the current authentication token. */
   @Override
   public TUserDTO getUserDetailsByAuthentication(Authentication authentication) {
     log.debug("Enter getUserDetails method :: [{}]", authentication);
@@ -215,9 +210,7 @@ public class UserServiceImpl implements UserService {
     return userMapper.toDto(existingUser);
   }
 
-  /**
-   * Returns a user by ID if not deleted.
-   */
+  /** Returns a user by ID if not deleted. */
   @Override
   @Transactional(readOnly = true)
   public Optional<TUserDTO> findOne(UUID id) {
@@ -226,9 +219,7 @@ public class UserServiceImpl implements UserService {
     return user.map(userMapper::toDto);
   }
 
-  /**
-   * Soft-deletes a user and removes them from Keycloak.
-   */
+  /** Soft-deletes a user and removes them from Keycloak. */
   @Override
   @CacheEvict(value = "users", key = "#id")
   public void delete(String clientName, UUID id) {
@@ -240,16 +231,29 @@ public class UserServiceImpl implements UserService {
     String keyCloakId = String.valueOf(user.getKeycloakUserId());
     keyCloakUtil.deleteUserFromKeycloak(clientName, keyCloakId);
 
-    // Sync with other services
+    // Sync with other services (Legacy Action)
     syncUserToSearchService(user, ACTION_DELETE);
 
+    // Soft delete the user (This will cascade to posts, comments, etc. if mapped correctly)
     user.setIsDeleted(true);
     userRepository.save(user);
+
+    // Publish dedicated UserDeletedEvent
+    try {
+      UserDeletedEvent deleteEvent =
+          UserDeletedEvent.builder()
+              .userId(user.getId().toString())
+              .email(user.getEmail())
+              .timestamp(System.currentTimeMillis())
+              .build();
+      kafkaTemplate.send(userDeletedTopic, user.getId().toString(), deleteEvent);
+      log.info("Published UserDeletedEvent for user: {}", user.getId());
+    } catch (Exception e) {
+      log.error("Failed to publish UserDeletedEvent: {}", e.getMessage());
+    }
   }
 
-  /**
-   * Retrieves a paginated list of all active users.
-   */
+  /** Retrieves a paginated list of all active users. */
   @Override
   public Page<TUserDTO> getAllUserDetail(Pageable pageable) {
     log.debug("Enter getAllUserDetail method .");
@@ -258,19 +262,19 @@ public class UserServiceImpl implements UserService {
   }
 
   /**
-   * Updates user password in Keycloak. 
-   * Note: Local password storage is removed for security compliance.
+   * Updates user password in Keycloak. Note: Local password storage is removed for security
+   * compliance.
    */
   @Override
   public void resetPassword(ChangePassword changePasswordDTO, String clientName) {
     log.debug("Enter resetPassword method for email: {}", changePasswordDTO.getEmailId());
     String newPassword = changePasswordDTO.getNewPassword();
     String confirmPassword = changePasswordDTO.getConfirmPassword();
-    
+
     if (!newPassword.equals(confirmPassword)) {
       throw new ValidationException(ErrorKeys.PASSWORD_AND_CONFIRM_PASSWORD_DO_NOT_MATCH);
     }
-    
+
     TUser user = userRepository.findByEmailAndIsDeletedFalse(changePasswordDTO.getEmailId());
     if (user == null) {
       throw new ResourceNotFoundException(ERROR_USER_NOT_FOUND);
@@ -282,8 +286,8 @@ public class UserServiceImpl implements UserService {
   }
 
   /**
-   * Updates core user details and/or profile image.
-   * Evicts the identity cache to ensure consistency.
+   * Updates core user details and/or profile image. Evicts the identity cache to ensure
+   * consistency.
    */
   @Override
   @CacheEvict(value = "users", key = "#userId")
@@ -294,7 +298,7 @@ public class UserServiceImpl implements UserService {
         userRepository
             .findById(userId)
             .orElseThrow(() -> new ResourceNotFoundException(ERROR_USER_NOT_FOUND));
-            
+
     existingUser.setFirstName(userDTO.getFirstName());
     existingUser.setLastName(userDTO.getLastName());
 
@@ -323,8 +327,12 @@ public class UserServiceImpl implements UserService {
             .updatedAt(System.currentTimeMillis())
             .action(action)
             .build();
+
+    // If it's a new user, we might not have profile info yet, but we should at least try to get defaults
+    // Search service handles nulls gracefully
     try {
       kafkaTemplate.send(TOPIC_USER_UPDATED, user.getId().toString(), event);
+      log.info("Synced user {} to search service with action {}", user.getId(), action);
     } catch (Exception e) {
       log.error("Failed to sync user {} to search service: {}", user.getId(), e.getMessage());
     }
@@ -474,5 +482,25 @@ public class UserServiceImpl implements UserService {
               return userMapper.toDto(user);
             })
         .collect(java.util.stream.Collectors.toList());
+  }
+
+  @Override
+  public List<TUserDTO> getUsersByIds(List<UUID> userIds) {
+    if (userIds == null || userIds.isEmpty()) {
+      return Collections.emptyList();
+    }
+    return userRepository.findAllById(userIds).stream()
+        .map(userMapper::toDto)
+        .collect(Collectors.toList());
+  }
+
+  @Override
+  public void syncAllUsersToSearch() {
+    log.info("Starting manual re-sync of all users to search service");
+    List<TUser> allUsers = userRepository.findAllByIsDeletedFalse(Pageable.unpaged()).getContent();
+    for (TUser user : allUsers) {
+        syncUserToSearchService(user, ACTION_UPDATE);
+    }
+    log.info("Finished re-sync of {} users", allUsers.size());
   }
 }

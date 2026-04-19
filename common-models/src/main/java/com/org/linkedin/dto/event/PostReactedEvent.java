@@ -12,4 +12,5 @@ public class PostReactedEvent implements Serializable {
   private String userName;
   private String userDesignation;
   private ReactionType reactionType;
+  private boolean isNewReaction;
 }

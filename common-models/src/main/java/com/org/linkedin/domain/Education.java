@@ -4,14 +4,22 @@ import jakarta.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.UUID;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
 
 @Entity
 @Table(name = "education")
-@Getter
-@Setter
-public class Education implements Serializable {
+@Data
+@SuperBuilder
+@NoArgsConstructor
+@AllArgsConstructor
+@SQLDelete(sql = "UPDATE education SET is_deleted = true WHERE id = ?")
+@Where(clause = "is_deleted = false")
+public class Education extends AbstractAuditingEntity<UUID> implements Serializable {
 
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)

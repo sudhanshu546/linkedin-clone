@@ -10,6 +10,7 @@ public class PostCreatedEvent implements Serializable {
   private String userId;
   private String userName;
   private String userDesignation;
+  private String userProfileImageUrl;
   private String content;
   private String imageUrl; // For backward compatibility or first image
   private List<String> imageUrls;

@@ -49,9 +49,7 @@ public class PresenceService {
     return userSessions.containsKey(userId);
   }
 
-  /**
-   * Returns a set of all user IDs currently online.
-   */
+  /** Returns a set of all user IDs currently online. */
   public Set<UUID> getOnlineUsers() {
     return userSessions.keySet();
   }

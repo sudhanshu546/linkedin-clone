@@ -20,4 +20,6 @@ public class JobApplicationDTO {
   private TUserDTO applicant;
   private String resumeUrl;
   private String coverLetter;
+  private String interviewDate;
+  private String interviewLink;
 }

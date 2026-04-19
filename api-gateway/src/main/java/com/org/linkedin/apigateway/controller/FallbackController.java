@@ -12,7 +12,13 @@ public class FallbackController {
 
   @RequestMapping(
       value = "/user",
-      method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
+      method = {
+        RequestMethod.GET,
+        RequestMethod.POST,
+        RequestMethod.PUT,
+        RequestMethod.DELETE,
+        RequestMethod.PATCH
+      })
   public Mono<ApiResponse<Void>> userFallback() {
     return Mono.just(
         ApiResponse.error("User Service is temporarily unavailable. Please try again later."));
@@ -20,7 +26,13 @@ public class FallbackController {
 
   @RequestMapping(
       value = "/profile",
-      method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
+      method = {
+        RequestMethod.GET,
+        RequestMethod.POST,
+        RequestMethod.PUT,
+        RequestMethod.DELETE,
+        RequestMethod.PATCH
+      })
   public Mono<ApiResponse<Void>> profileFallback() {
     return Mono.just(
         ApiResponse.error("Profile Service is temporarily unavailable. Please try again later."));
@@ -28,7 +40,13 @@ public class FallbackController {
 
   @RequestMapping(
       value = "/notification",
-      method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
+      method = {
+        RequestMethod.GET,
+        RequestMethod.POST,
+        RequestMethod.PUT,
+        RequestMethod.DELETE,
+        RequestMethod.PATCH
+      })
   public Mono<ApiResponse<Void>> notificationFallback() {
     return Mono.just(
         ApiResponse.error(
@@ -37,7 +55,13 @@ public class FallbackController {
 
   @RequestMapping(
       value = "/job",
-      method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
+      method = {
+        RequestMethod.GET,
+        RequestMethod.POST,
+        RequestMethod.PUT,
+        RequestMethod.DELETE,
+        RequestMethod.PATCH
+      })
   public Mono<ApiResponse<Void>> jobFallback() {
     return Mono.just(
         ApiResponse.error("Job Service is temporarily unavailable. Please try again later."));
@@ -45,7 +69,13 @@ public class FallbackController {
 
   @RequestMapping(
       value = "/chat",
-      method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
+      method = {
+        RequestMethod.GET,
+        RequestMethod.POST,
+        RequestMethod.PUT,
+        RequestMethod.DELETE,
+        RequestMethod.PATCH
+      })
   public Mono<ApiResponse<Void>> chatFallback() {
     return Mono.just(
         ApiResponse.error("Chat Service is temporarily unavailable. Please try again later."));
@@ -53,7 +83,13 @@ public class FallbackController {
 
   @RequestMapping(
       value = "/search",
-      method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
+      method = {
+        RequestMethod.GET,
+        RequestMethod.POST,
+        RequestMethod.PUT,
+        RequestMethod.DELETE,
+        RequestMethod.PATCH
+      })
   public Mono<ApiResponse<Void>> searchFallback() {
     return Mono.just(
         ApiResponse.error("Search Service is temporarily unavailable. Please try again later."));

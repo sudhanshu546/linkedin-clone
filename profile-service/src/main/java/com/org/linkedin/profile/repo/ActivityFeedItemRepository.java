@@ -13,4 +13,6 @@ public interface ActivityFeedItemRepository extends JpaRepository<ActivityFeedIt
 
   Page<ActivityFeedItem> findByUserIdOrderByPriorityDescTimestampDesc(
       UUID userId, Pageable pageable);
+
+  void deleteByPostId(UUID postId);
 }

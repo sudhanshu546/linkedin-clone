@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -31,13 +33,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-
 /**
- * Service implementation for managing job listings and applications.
- * Integrates with Search Service (via Kafka) for discovery and Uses Redis for caching.
+ * Service implementation for managing job listings and applications. Integrates with Search Service
+ * (via Kafka) for discovery and Uses Redis for caching.
  */
 @Service
 @RequiredArgsConstructor
@@ -55,10 +53,7 @@ public class JobServiceImpl implements JobService {
   @PersistenceContext private final EntityManager entityManager;
   private final CommonUtil commonUtil;
 
-  /**
-   * Creates a new job posting.
-   * Synchronizes with Elasticsearch via Kafka.
-   */
+  /** Creates a new job posting. Synchronizes with Elasticsearch via Kafka. */
   @Override
   @CacheEvict(value = "jobs", allEntries = true)
   public JobDTO createJob(Authentication authentication, JobDTO jobDTO) {
@@ -76,9 +71,7 @@ public class JobServiceImpl implements JobService {
     return result;
   }
 
-  /**
-   * Retrieves all jobs with pagination.
-   */
+  /** Retrieves all jobs with pagination. */
   @Override
   public Page<JobDTO> getAllJobs(Pageable pageable) {
     Page<Job> jobPage = jobRepository.findAll(pageable);
@@ -87,8 +80,8 @@ public class JobServiceImpl implements JobService {
   }
 
   /**
-   * Fetches a specific job by its unique identifier.
-   * Uses Redis to cache job details for faster access.
+   * Fetches a specific job by its unique identifier. Uses Redis to cache job details for faster
+   * access.
    */
   @Override
   @Cacheable(value = "jobs", key = "#jobId")
@@ -99,10 +92,7 @@ public class JobServiceImpl implements JobService {
     return jobMapper.toDto(job);
   }
 
-  /**
-   * Updates an existing job posting.
-   * Evicts cache to ensure consistency.
-   */
+  /** Updates an existing job posting. Evicts cache to ensure consistency. */
   @Override
   @CacheEvict(value = "jobs", key = "#jobId")
   public JobDTO updateJob(Authentication authentication, UUID jobId, JobDTO jobDTO) {
@@ -113,7 +103,7 @@ public class JobServiceImpl implements JobService {
         jobRepository.findById(jobId).orElseThrow(() -> new RuntimeException(ERROR_JOB_NOT_FOUND));
 
     if (!job.getPostedBy().equals(internalUserId)) {
-        throw new RuntimeException("Unauthorized to update this job");
+      throw new RuntimeException("Unauthorized to update this job");
     }
 
     jobMapper.partialUpdate(job, jobDTO);
@@ -126,28 +116,25 @@ public class JobServiceImpl implements JobService {
     return result;
   }
 
-  /**
-   * Deletes a job posting.
-   */
+  /** Deletes a job posting. */
   @Override
   @CacheEvict(value = "jobs", key = "#jobId")
   public void deleteJob(Authentication authentication, UUID jobId) {
     UUID keycloakId = UUID.fromString(authentication.getName());
     UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getData().getId();
 
-    Job job = jobRepository.findById(jobId).orElseThrow(() -> new RuntimeException(ERROR_JOB_NOT_FOUND));
+    Job job =
+        jobRepository.findById(jobId).orElseThrow(() -> new RuntimeException(ERROR_JOB_NOT_FOUND));
 
     if (!job.getPostedBy().equals(internalUserId)) {
-        throw new RuntimeException("Unauthorized to delete this job");
+      throw new RuntimeException("Unauthorized to delete this job");
     }
 
     syncJobToSearch(JobDTO.builder().id(jobId).build(), ACTION_DELETE);
     jobRepository.deleteById(jobId);
   }
 
-  /**
-   * Basic search functionality for jobs.
-   */
+  /** Basic search functionality for jobs. */
   @Override
   public Page<JobDTO> searchJobs(
       String query,
@@ -163,9 +150,7 @@ public class JobServiceImpl implements JobService {
     return new PageImpl<>(dtoList, pageable, jobPage.getTotalElements());
   }
 
-  /**
-   * Allows a user to apply for a job.
-   */
+  /** Allows a user to apply for a job. */
   @Override
   public JobApplicationDTO applyToJob(
       Authentication authentication, UUID jobId, String resumeUrl, String coverLetter) {
@@ -185,9 +170,7 @@ public class JobServiceImpl implements JobService {
     return jobApplicationMapper.toDto(application);
   }
 
-  /**
-   * Retrieves applications submitted by the current authenticated user.
-   */
+  /** Retrieves applications submitted by the current authenticated user. */
   @Override
   public List<JobApplicationDTO> getMyApplications(Authentication authentication) {
     UUID keycloakId = UUID.fromString(authentication.getName());
@@ -197,20 +180,16 @@ public class JobServiceImpl implements JobService {
     return jobApplicationMapper.toDto(apps);
   }
 
-  /**
-   * Retrieves job postings created by the current authenticated user.
-   */
+  /** Retrieves job postings created by the current authenticated user. */
   @Override
   public List<JobDTO> getMyPostings(Authentication authentication) {
     UUID keycloakId = UUID.fromString(authentication.getName());
-    UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getData().getId();
+    UUID internalUserId = userService.getUserById(keycloakId).getBody().getData().getId();
     List<Job> postings = jobRepository.findByPostedByOrderByCreatedDateDesc(internalUserId);
     return jobMapper.toDto(postings);
   }
 
-  /**
-   * Retrieves all applicants for a specific job, optionally filtered by status.
-   */
+  /** Retrieves all applicants for a specific job, optionally filtered by status. */
   @Override
   public List<JobApplicationDTO> getJobApplicants(UUID jobId, String status) {
     List<JobApplication> apps;
@@ -222,9 +201,7 @@ public class JobServiceImpl implements JobService {
     return jobApplicationMapper.toDto(apps);
   }
 
-  /**
-   * Advanced recruiter search for job listings.
-   */
+  /** Advanced recruiter search for job listings. */
   @Override
   public Page<JobDTO> advancedSearch(AdvanceSearchCriteria criteria) {
     log.debug("Entering advancedSearch for Jobs");
@@ -249,7 +226,7 @@ public class JobServiceImpl implements JobService {
 
     Root<Job> root = (Root<Job>) criteriaQuery.getRoots().iterator().next();
     criteriaQuery.orderBy(entityManager.getCriteriaBuilder().desc(root.get("createdDate")));
-    
+
     List<Job> jobList =
         entityManager
             .createQuery(criteriaQuery)
@@ -264,18 +241,25 @@ public class JobServiceImpl implements JobService {
   }
 
   /**
-   * Updates the status of a job application (e.g., SCREENING, INTERVIEW, REJECTED).
-   * Triggers a notification to the applicant.
+   * Updates the status of a job application (e.g., SCREENING, INTERVIEW, REJECTED). Triggers a
+   * notification to the applicant.
    */
   @Override
-  public JobApplicationDTO updateApplicationStatus(Authentication authentication, UUID jobId, UUID applicantId, String status) {
+  public JobApplicationDTO updateApplicationStatus(
+      Authentication authentication,
+      UUID jobId,
+      UUID applicantId,
+      String status,
+      String interviewDate,
+      String interviewLink) {
     UUID keycloakId = UUID.fromString(authentication.getName());
     UUID internalUserId = userService.getUserByKeyCloakId(keycloakId).getBody().getData().getId();
 
-    Job job = jobRepository.findById(jobId).orElseThrow(() -> new RuntimeException(ERROR_JOB_NOT_FOUND));
+    Job job =
+        jobRepository.findById(jobId).orElseThrow(() -> new RuntimeException(ERROR_JOB_NOT_FOUND));
 
     if (!job.getPostedBy().equals(internalUserId)) {
-        throw new RuntimeException("Unauthorized to update application status for this job");
+      throw new RuntimeException("Unauthorized to update application status for this job");
     }
 
     JobApplication application =
@@ -283,6 +267,14 @@ public class JobServiceImpl implements JobService {
             .findByJobIdAndApplicantId(jobId, applicantId)
             .orElseThrow(() -> new RuntimeException(ERROR_APP_NOT_FOUND));
     application.setStatus(status);
+
+    if (interviewDate != null) {
+      application.setInterviewDate(interviewDate);
+    }
+    if (interviewLink != null) {
+      application.setInterviewLink(interviewLink);
+    }
+
     application = jobApplicationRepository.save(application);
 
     // Notify the user via Notification Service
@@ -295,10 +287,7 @@ public class JobServiceImpl implements JobService {
     kafkaTemplate.send(
         TOPIC_JOB_UPDATED,
         job.getId().toString(),
-        com.org.linkedin.dto.event.JobUpdatedEvent.builder()
-            .job(job)
-            .action(action)
-            .build());
+        com.org.linkedin.dto.event.JobUpdatedEvent.builder().job(job).action(action).build());
   }
 
   private void notifyApplicantStatusChange(UUID jobId, UUID applicantId, String status) {

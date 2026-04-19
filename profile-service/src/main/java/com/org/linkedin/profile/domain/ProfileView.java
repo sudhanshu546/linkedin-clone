@@ -11,7 +11,9 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(
     name = "profile_views",
-    indexes = {@Index(name = "idx_profile_view_owner_ts", columnList = "profile_owner_id, viewed_at DESC")})
+    indexes = {
+      @Index(name = "idx_profile_view_owner_ts", columnList = "profile_owner_id, viewed_at DESC")
+    })
 @Data
 @Builder
 @NoArgsConstructor

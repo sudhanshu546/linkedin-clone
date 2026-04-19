@@ -5,6 +5,7 @@ import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
 import java.io.Serial;
 import java.io.Serializable;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -33,6 +34,7 @@ public abstract class AbstractAuditingEntity<T> implements Serializable {
   @Column(name = "created_by", updatable = false)
   private T createdBy;
 
+  @Builder.Default
   @CreatedDate
   @Column(name = "created_at", updatable = false)
   private Long createdDate = System.currentTimeMillis();
@@ -41,13 +43,16 @@ public abstract class AbstractAuditingEntity<T> implements Serializable {
   @Column(name = "last_modified_by")
   private T lastModifiedBy;
 
+  @Builder.Default
   @LastModifiedDate
   @Column(name = "updated_at")
   private Long lastModifiedDate = System.currentTimeMillis();
 
+  @Builder.Default
   @Column(name = "is_deleted", columnDefinition = "boolean default false")
-  private Boolean isDeleted;
+  private Boolean isDeleted = false;
 
+  @Builder.Default
   @Column(name = "is_enabled", columnDefinition = "boolean default true")
-  private Boolean isEnabled;
+  private Boolean isEnabled = true;
 }
